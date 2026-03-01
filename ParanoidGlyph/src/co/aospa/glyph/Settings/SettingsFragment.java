@@ -175,14 +175,19 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mThermalCpuPreference.setOnPreferenceChangeListener(this);
 
         mThermalCpuThresholdPreference = (SliderPreference) findPreference(Constants.GLYPH_THERMAL_CPU_THRESHOLD);
-        mThermalCpuThresholdPreference.setMin(60);
+        mThermalCpuThresholdPreference.setMin(65);
         mThermalCpuThresholdPreference.setMax(95);
-        mThermalCpuThresholdPreference.setSliderIncrement(1);
-        mThermalCpuThresholdPreference.setValue(SettingsManager.getGlyphThermalCpuThreshold());
-        mThermalCpuThresholdPreference.setSummary(SettingsManager.getGlyphThermalCpuThreshold() + "°C");
+        mThermalCpuThresholdPreference.setSliderIncrement(5);
         mThermalCpuThresholdPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
         mThermalCpuThresholdPreference.setTickVisible(false);
         mThermalCpuThresholdPreference.setUpdatesContinuously(true);
+        
+        int currentThreshold = SettingsManager.getGlyphThermalCpuThreshold();
+        currentThreshold = Math.round(currentThreshold / 5.0f) * 5;
+        if (currentThreshold < 65) currentThreshold = 65;
+        if (currentThreshold > 95) currentThreshold = 95;
+        mThermalCpuThresholdPreference.setValue(currentThreshold);
+        mThermalCpuThresholdPreference.setSummary(currentThreshold + "°C");
         mThermalCpuThresholdPreference.setOnPreferenceChangeListener(this);
 
         mCameraRecordingLedPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE);
@@ -315,6 +320,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         if (preferenceKey.equals(Constants.GLYPH_THERMAL_CPU_THRESHOLD)) {
             int value = (Integer) newValue;
+            value = Math.round(value / 5.0f) * 5;
             mThermalCpuThresholdPreference.setSummary(value + "°C");
             mHandler.post(() -> ServiceUtils.checkGlyphService());
             return true;
