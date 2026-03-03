@@ -16,6 +16,7 @@
 
 package co.aospa.glyph.Manager;
 
+import android.os.SystemClock;
 import android.util.Log;
 
 import com.android.internal.util.ArrayUtils;
@@ -102,7 +103,7 @@ public final class AnimationManager {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     if (checkInterruption("csv")) throw new InterruptedException();
-                    long frameStart = System.currentTimeMillis();
+                    long frameStart = SystemClock.uptimeMillis();
                     line = line.replace(" ", "");
                     line = line.endsWith(",") ? line.substring(0, line.length() - 1) : line;
                     String[] pattern = line.split(",");
@@ -112,8 +113,8 @@ public final class AnimationManager {
                         if (DEBUG) Log.d(TAG, "Animation line length mismatch | name: " + name + " | line: " + line);
                         throw new InterruptedException();
                     }
-                    long delay = 16666L - (System.currentTimeMillis() - frameStart);
-                    if (delay > 0) Thread.sleep(delay / 1000);
+                    long elapsed = SystemClock.uptimeMillis() - frameStart;
+                    SystemClock.sleep(Math.max(1L, 16L - elapsed));
                 }
             } catch (Exception e) {
                 if (DEBUG) Log.d(TAG, "Exception while playing animation | name: " + name + " | exception: " + e);
@@ -247,42 +248,48 @@ public final class AnimationManager {
         submit(() -> {
             StatusManager.setCallLedEnabled(true);
 
-            if (!check("call: " + name, true))
-                return;
+            if (!check("call: " + name, true)) return;
 
             StatusManager.setCallLedActive(true);
 
-            while (StatusManager.isCallLedEnabled()) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                        ResourceUtils.getCallAnimation(name)))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (checkInterruption("call")) throw new InterruptedException();
-                        long frameStart = System.currentTimeMillis();
-                        line = line.replace(" ", "");
-                        line = line.endsWith(",") ? line.substring(0, line.length() - 1) : line;
-                        String[] pattern = line.split(",");
-                        if (ArrayUtils.contains(Constants.getSupportedAnimationPatternLengths(), pattern.length)) {
-                            updateLedFrame(pattern);
-                        } else {
-                            if (DEBUG) Log.d(TAG, "Animation line length mismatch | name: " + name + " | line: " + line);
-                            throw new InterruptedException();
-                        }
-                        long delay = 16666L - (System.currentTimeMillis() - frameStart);
-                        if (delay > 0) Thread.sleep(delay / 1000);
+            Log.d(TAG, "Playing call animation once | name: " + name);
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    ResourceUtils.getCallAnimation(name)))) {
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!StatusManager.isCallLedEnabled() || checkInterruption("call")) break;
+
+                    long frameStart = System.currentTimeMillis();
+
+                    String cleanLine = line.replace(" ", "");
+                    cleanLine = cleanLine.endsWith(",") ? cleanLine.substring(0, cleanLine.length() - 1) : cleanLine;
+                    String[] pattern = cleanLine.split(",");
+
+                    if (ArrayUtils.contains(Constants.getSupportedAnimationPatternLengths(), pattern.length)) {
+                        updateLedFrame(pattern);
+                    } else {
+                        if (DEBUG) Log.d(TAG, "Line length mismatch | " + name);
+                        break;
                     }
-                } catch (Exception e) {
-                    if (DEBUG) Log.d(TAG, "Exception while playing animation | name: " + name + " | exception: " + e);
-                } finally {
-                    if (StatusManager.isAllLedActive()) {
-                        if (DEBUG) Log.d(TAG, "All LED active, pause playing animation | name: " + name);
-                        while (StatusManager.isAllLedActive()) {}
+
+                    long delay = 16L - (System.currentTimeMillis() - frameStart);
+                    if (delay > 0) {
+                        try {
+                            Thread.sleep(delay);
+                        } catch (InterruptedException e) {
+                            break;
+                        }
                     }
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "Exception in call animation | " + name, e);
+            } finally {
+                updateLedFrame(new float[5]);
+                StatusManager.setCallLedActive(false);
+                Log.d(TAG, "Call animation finished (one cycle) | " + name);
             }
-            updateLedFrame(new float[5]);
-            StatusManager.setCallLedActive(false);
-            if (DEBUG) Log.d(TAG, "Done playing animation | name: " + name);
         });
     }
 
@@ -389,13 +396,9 @@ public final class AnimationManager {
         float maxBrightness = (float) Constants.getMaxBrightness();
         int essentialLed = ResourceUtils.getInteger("glyph_settings_notifs_essential_led");
         if (StatusManager.isEssentialLedActive()) {
-            if (pattern.length == 5) { // Phone (1) pattern
+            if (pattern.length == 5) {
                 if (pattern[1] < (maxBrightness / 100 * 7)) {
                     pattern[1] = maxBrightness / 100 * 7;
-                }
-            } else if (pattern.length == 33) { // Phone (2) pattern
-                if (pattern[2] < (maxBrightness / 100 * 7)) {
-                    pattern[2] = maxBrightness / 100 * 7;
                 }
             }
         }
