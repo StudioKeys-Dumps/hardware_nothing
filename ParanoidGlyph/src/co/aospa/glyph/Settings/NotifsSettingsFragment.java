@@ -48,7 +48,9 @@ import java.util.List;
 
 import co.aospa.glyph.R;
 import co.aospa.glyph.Constants.Constants;
+import co.aospa.glyph.Manager.AnimationManager;
 import co.aospa.glyph.Manager.SettingsManager;
+import co.aospa.glyph.Manager.StatusManager;
 import co.aospa.glyph.Preference.GlyphAnimationPreference;
 import co.aospa.glyph.Utils.ResourceUtils;
 import co.aospa.glyph.Utils.ServiceUtils;
@@ -67,6 +69,8 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
     private GlyphAnimationPreference mGlyphAnimationPreference;
     private Handler mHandler = new Handler();
     private MediaPlayer mMediaPlayer;
+
+    private volatile boolean mPreviewActive = false;
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -90,6 +94,10 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         }
 
         mGlyphAnimationPreference = (GlyphAnimationPreference) findPreference(Constants.GLYPH_NOTIFS_SUB_PREVIEW);
+
+        if (mGlyphAnimationPreference != null) {
+            mGlyphAnimationPreference.setAnimationType("notification");
+        }
 
         mPackageManager = getActivity().getPackageManager();
         List<ApplicationInfo> mApps = mPackageManager.getInstalledApplications(PackageManager.GET_GIDS);
@@ -133,8 +141,14 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
     }
 
     private void stopPreview() {
+        mPreviewActive = false;
+
         if (mGlyphAnimationPreference != null) {
             mGlyphAnimationPreference.updateAnimation(false, "", 0, false);
+        }
+
+        if (StatusManager.isAnimationActive()) {
+            StatusManager.setAnimationActive(false);
         }
 
         if (mMediaPlayer != null) {
@@ -173,9 +187,18 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         stopPreview();
 
         mHandler.postDelayed(() -> {
+            mPreviewActive = true;
+
+            final boolean wasEssentialActive = StatusManager.isEssentialLedActive();
+            if (wasEssentialActive) {
+                StatusManager.setEssentialLedActive(false);
+            }
+
             if (mGlyphAnimationPreference != null) {
                 mGlyphAnimationPreference.updateAnimation(true, name, 0, true);
             }
+
+            AnimationManager.playNotification(name, true);
 
             new Thread(() -> {
                 try {
@@ -188,18 +211,40 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
                     mMediaPlayer.setDataSource(path);
                     mMediaPlayer.prepare();
                     mMediaPlayer.start();
+
                     mMediaPlayer.setOnCompletionListener(mp -> {
-                        if (mGlyphAnimationPreference != null) {
-                            mGlyphAnimationPreference.updateAnimation(false, name, 0, false);
+
+                        if (wasEssentialActive) {
+                            StatusManager.setEssentialLedActive(true);
+                            AnimationManager.playEssential();
                         }
+                        if (mGlyphAnimationPreference != null) {
+                            mGlyphAnimationPreference.updateAnimation(false, name);
+                        }
+                        if (StatusManager.isAnimationActive()) {
+                            StatusManager.setAnimationActive(false);
+                        }
+                        mPreviewActive = false;
                         mp.release();
                         mMediaPlayer = null;
                     });
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to play preview: " + e.getMessage());
+                    Log.e(TAG, "Failed to play notification preview: " + e.getMessage());
+    
+                    if (wasEssentialActive) {
+                        StatusManager.setEssentialLedActive(true);
+                        AnimationManager.playEssential();
+                    }
+                    if (mGlyphAnimationPreference != null) {
+                        mGlyphAnimationPreference.updateAnimation(false, name);
+                    }
+                    if (StatusManager.isAnimationActive()) {
+                        StatusManager.setAnimationActive(false);
+                    }
+                    mPreviewActive = false;
                 }
             }).start();
-        }, 50);
+        }, 150);
     }
 
     @Override

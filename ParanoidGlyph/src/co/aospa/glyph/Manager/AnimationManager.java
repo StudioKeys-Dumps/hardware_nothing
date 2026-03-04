@@ -126,6 +126,45 @@ public final class AnimationManager {
         });
     }
 
+    public static void playNotification(String name) {
+        playNotification(name, false);
+    }
+
+    public static void playNotification(String name, boolean wait) {
+        submit(() -> {
+            if (!check(name, wait))
+                return;
+
+            StatusManager.setAnimationActive(true);
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    ResourceUtils.getNotificationAnimation(name)))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (checkInterruption("csv")) throw new InterruptedException();
+                    long frameStart = SystemClock.uptimeMillis();
+                    line = line.replace(" ", "");
+                    line = line.endsWith(",") ? line.substring(0, line.length() - 1) : line;
+                    String[] pattern = line.split(",");
+                    if (ArrayUtils.contains(Constants.getSupportedAnimationPatternLengths(), pattern.length)) {
+                        updateLedFrame(pattern);
+                    } else {
+                        if (DEBUG) Log.d(TAG, "Animation line length mismatch | name: " + name + " | line: " + line);
+                        throw new InterruptedException();
+                    }
+                    long elapsed = SystemClock.uptimeMillis() - frameStart;
+                    SystemClock.sleep(Math.max(1L, 16L - elapsed));
+                }
+            } catch (Exception e) {
+                if (DEBUG) Log.d(TAG, "Exception while playing notification animation | name: " + name + " | exception: " + e);
+            } finally {
+                updateLedFrame(new float[5]);
+                StatusManager.setAnimationActive(false);
+                if (DEBUG) Log.d(TAG, "Done playing notification animation | name: " + name);
+            }
+        });
+    }
+
     public static void playCharging(int batteryLevel, boolean wait) {
         submit(() -> {
             if (!check("charging", wait))

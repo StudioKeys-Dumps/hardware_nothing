@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package co.aospa.glyph.Preference;
 
 import android.app.Activity;
@@ -41,6 +40,8 @@ public class GlyphAnimationPreference extends Preference {
 
     private final String TAG = "GlyphAnimationPreference";
     private final boolean DEBUG = true;
+
+    private String animationType = "call";
 
     private Activity mActivity;
 
@@ -94,6 +95,10 @@ public class GlyphAnimationPreference extends Preference {
                 setActivity(((ContextWrapper) context).getBaseContext());
             }
         }
+    }
+
+    public void setAnimationType(String type) {
+        animationType = type;
     }
 
     @Override
@@ -183,10 +188,12 @@ public class GlyphAnimationPreference extends Preference {
 
                     animationReset = false;
 
-                    if (DEBUG) Log.d(TAG, "Starting animation loop | name: " + animationName);
+                    if (DEBUG) Log.d(TAG, "Starting animation | name: " + animationName
+                            + " | type: " + animationType);
 
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                            ResourceUtils.getAnimation(animationName)))) {
+                            resolveAnimation(animationName)))) {
+
                         String line;
                         while ((line = reader.readLine()) != null) {
                             if (animationTerminated || animationPaused || animationReset) break;
@@ -255,7 +262,7 @@ public class GlyphAnimationPreference extends Preference {
                             animationOnce = false;
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "Animation error", e);
+                        Log.e(TAG, "Animation error | name: " + animationName, e);
                     } finally {
                         if (mActivity != null && (animationPaused || animationReset)) {
                             mActivity.runOnUiThread(() -> {
@@ -279,5 +286,12 @@ public class GlyphAnimationPreference extends Preference {
                 }
             }
         };
+    }
+
+    private java.io.InputStream resolveAnimation(String name) throws java.io.IOException {
+        if ("notification".equals(animationType)) {
+            return ResourceUtils.getNotificationAnimation(name);
+        }
+        return ResourceUtils.getCallAnimation(name);
     }
 }

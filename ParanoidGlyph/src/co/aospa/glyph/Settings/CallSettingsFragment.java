@@ -39,7 +39,9 @@ import com.android.settingslib.widget.SettingsBasePreferenceFragment;
 
 import co.aospa.glyph.R;
 import co.aospa.glyph.Constants.Constants;
+import co.aospa.glyph.Manager.AnimationManager;
 import co.aospa.glyph.Manager.SettingsManager;
+import co.aospa.glyph.Manager.StatusManager;
 import co.aospa.glyph.Preference.GlyphAnimationPreference;
 import co.aospa.glyph.Utils.ResourceUtils;
 import co.aospa.glyph.Utils.ServiceUtils;
@@ -52,6 +54,8 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
     private GlyphAnimationPreference mGlyphAnimationPreference;
     private Handler mHandler = new Handler();
     private MediaPlayer mMediaPlayer;
+
+    private volatile boolean mPreviewActive = false;
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -90,10 +94,12 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
     }
 
     private void stopPreview() {
+        mPreviewActive = false;
         if (mGlyphAnimationPreference != null) {
             mGlyphAnimationPreference.updateAnimation(false, "", 0, false);
         }
 
+        AnimationManager.stopCall();
         if (mMediaPlayer != null) {
             try {
                 if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
@@ -130,10 +136,12 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
         stopPreview();
 
         mHandler.postDelayed(() -> {
+            mPreviewActive = true;
             if (mGlyphAnimationPreference != null) {
                 mGlyphAnimationPreference.updateAnimation(true, name, 0, true);
             }
 
+            AnimationManager.playCall(name);
             new Thread(() -> {
                 try {
                     String path = "/product/media/audio/" + type + "/" + name + ".ogg";
@@ -145,18 +153,26 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
                     mMediaPlayer.setDataSource(path);
                     mMediaPlayer.prepare();
                     mMediaPlayer.start();
+
                     mMediaPlayer.setOnCompletionListener(mp -> {
                         if (mGlyphAnimationPreference != null) {
-                            mGlyphAnimationPreference.updateAnimation(false, name, 0, false);
+                            mGlyphAnimationPreference.updateAnimation(false, name);
                         }
+                        AnimationManager.stopCall();
+                        mPreviewActive = false;
                         mp.release();
                         mMediaPlayer = null;
                     });
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to play preview: " + e.getMessage());
+                    Log.e(TAG, "Failed to play ringtone preview: " + e.getMessage());
+                    if (mGlyphAnimationPreference != null) {
+                        mGlyphAnimationPreference.updateAnimation(false, name);
+                    }
+                    AnimationManager.stopCall();
+                    mPreviewActive = false;
                 }
             }).start();
-        }, 50);
+        }, 150);
     }
 
     @Override
