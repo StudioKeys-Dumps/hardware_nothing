@@ -90,6 +90,18 @@ public final class SettingsManager {
                         ResourceUtils.getString("glyph_settings_call_animations_default"));
     }
 
+    public static String getGlyphCallCustomRingtoneUri() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getString(Constants.GLYPH_CALL_SUB_CUSTOM_RINGTONE_URI, "");
+    }
+
+    public static void setGlyphCallCustomRingtoneUri(String uri) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putString(Constants.GLYPH_CALL_SUB_CUSTOM_RINGTONE_URI, uri)
+                .apply();
+    }
+
     public static boolean isGlyphMusicVisualizerEnabled() {
         return PreferenceManager.getDefaultSharedPreferences(context)
                 .getBoolean(Constants.GLYPH_MUSIC_VISUALIZER_ENABLE, false) && isGlyphEnabled();
@@ -116,6 +128,18 @@ public final class SettingsManager {
                         ResourceUtils.getString("glyph_settings_notifs_animations_default"));
     }
 
+    public static String getGlyphNotifsCustomSoundUri() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getString(Constants.GLYPH_NOTIFS_SUB_CUSTOM_SOUND_URI, "");
+    }
+
+    public static void setGlyphNotifsCustomSoundUri(String uri) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putString(Constants.GLYPH_NOTIFS_SUB_CUSTOM_SOUND_URI, uri)
+                .apply();
+    }
+
     public static boolean isGlyphNotifsAppEnabled(String app) {
         return PreferenceManager.getDefaultSharedPreferences(context)
                 .getBoolean(app, true) && isGlyphNotifsEnabled();
@@ -123,7 +147,7 @@ public final class SettingsManager {
 
     public static boolean isGlyphNotifsAppEssential(String app) {
         Set<String> selectedValues = PreferenceManager.getDefaultSharedPreferences(context)
-                .getStringSet(Constants.GLYPH_NOTIFS_SUB_ESSENTIAL , new HashSet<String>());
+                .getStringSet(Constants.GLYPH_NOTIFS_SUB_ESSENTIAL, new HashSet<String>());
         return selectedValues.contains(app) && isGlyphNotifsEnabled();
     }
 }

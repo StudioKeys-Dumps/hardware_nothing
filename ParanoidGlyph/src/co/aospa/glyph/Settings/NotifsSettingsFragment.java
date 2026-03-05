@@ -17,6 +17,7 @@
 package co.aospa.glyph.Settings;
 
 import android.content.ContentUris;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -30,6 +31,9 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.preference.ListPreference;
 import androidx.preference.MultiSelectListPreference;
 import androidx.preference.Preference;
@@ -55,7 +59,8 @@ import co.aospa.glyph.Preference.GlyphAnimationPreference;
 import co.aospa.glyph.Utils.ResourceUtils;
 import co.aospa.glyph.Utils.ServiceUtils;
 
-public class NotifsSettingsFragment extends SettingsBasePreferenceFragment implements OnPreferenceChangeListener {
+public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
+        implements OnPreferenceChangeListener {
 
     private static final String TAG = "GlyphNotifsSettingsFragment";
 
@@ -72,6 +77,11 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
 
     private volatile boolean mPreviewActive = false;
 
+    private final ActivityResultLauncher<Intent> mSoundPickerLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    this::onSoundPickerResult);
+
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         addPreferencesFromResource(R.xml.glyph_notifs_settings);
@@ -87,11 +97,7 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
 
         mListPreference = (ListPreference) findPreference(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS);
         mListPreference.setOnPreferenceChangeListener(this);
-        mListPreference.setEntries(ResourceUtils.getNotificationAnimations());
-        mListPreference.setEntryValues(ResourceUtils.getNotificationAnimations());
-        if (!ArrayUtils.contains(ResourceUtils.getNotificationAnimations(), mListPreference.getValue())) {
-            mListPreference.setValue(ResourceUtils.getString("glyph_settings_notifs_animations_default"));
-        }
+        populateAnimationList();
 
         mGlyphAnimationPreference = (GlyphAnimationPreference) findPreference(Constants.GLYPH_NOTIFS_SUB_PREVIEW);
 
@@ -125,11 +131,46 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         mMultiSelectListPreference.setEntryValues(mEssentialApps.toArray(new CharSequence[0]));
     }
 
+    private void populateAnimationList() {
+        String[] notifAnims = ResourceUtils.getNotificationAnimations();
+        String customLabel = getString(R.string.glyph_settings_notifs_sub_custom_sound_title);
+
+        CharSequence[] entries = new CharSequence[notifAnims.length + 1];
+        CharSequence[] entryValues = new CharSequence[notifAnims.length + 1];
+        for (int i = 0; i < notifAnims.length; i++) {
+            entries[i] = notifAnims[i];
+            entryValues[i] = notifAnims[i];
+        }
+        entries[notifAnims.length] = customLabel;
+        entryValues[notifAnims.length] = Constants.GLYPH_NOTIFS_CUSTOM_VALUE;
+
+        mListPreference.setEntries(entries);
+        mListPreference.setEntryValues(entryValues);
+
+        String saved = mListPreference.getValue();
+        if (saved == null || (!ArrayUtils.contains(notifAnims, saved)
+                && !saved.equals(Constants.GLYPH_NOTIFS_CUSTOM_VALUE))) {
+            mListPreference.setValue(ResourceUtils.getString("glyph_settings_notifs_animations_default"));
+        }
+
+        if (Constants.GLYPH_NOTIFS_CUSTOM_VALUE.equals(mListPreference.getValue())) {
+            mListPreference.setSummary(getString(R.string.glyph_settings_notifs_sub_custom_sound_set));
+        }
+    }
+
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mHandler.postDelayed(() -> {
-            playPreviewSynced(SettingsManager.getGlyphNotifsAnimation(), "notifications");
+            String current = mListPreference.getValue();
+            if (Constants.GLYPH_NOTIFS_CUSTOM_VALUE.equals(current)) {
+                String uriString = SettingsManager.getGlyphNotifsCustomSoundUri();
+                if (uriString != null && !uriString.isEmpty()) {
+                    playCustomAudioOnly(Uri.parse(uriString));
+                }
+            } else {
+                playPreviewSynced(SettingsManager.getGlyphNotifsAnimation(), "notifications");
+            }
         }, 300);
     }
 
@@ -140,8 +181,41 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         stopPreview();
     }
 
+    private void openSoundPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("audio/*");
+        mSoundPickerLauncher.launch(intent);
+    }
+
+    private void onSoundPickerResult(ActivityResult result) {
+        if (result.getData() == null) {
+            String prev = SettingsManager.getGlyphNotifsAnimation();
+            mListPreference.setValue(prev);
+            return;
+        }
+
+        Uri uri = result.getData().getData();
+        if (uri == null) {
+            String prev = SettingsManager.getGlyphNotifsAnimation();
+            mListPreference.setValue(prev);
+            return;
+        }
+
+        SettingsManager.setGlyphNotifsCustomSoundUri(uri.toString());
+        RingtoneManager.setActualDefaultRingtoneUri(
+                getContext(), RingtoneManager.TYPE_NOTIFICATION, uri);
+        Log.d(TAG, "Custom notification sound set to: " + uri);
+
+        mListPreference.setValue(Constants.GLYPH_NOTIFS_CUSTOM_VALUE);
+        mListPreference.setSummary(getString(R.string.glyph_settings_notifs_sub_custom_sound_set));
+
+        playCustomAudioOnly(uri);
+    }
+
     private void stopPreview() {
         mPreviewActive = false;
+        mHandler.removeCallbacksAndMessages(null);
 
         if (mGlyphAnimationPreference != null) {
             mGlyphAnimationPreference.updateAnimation(false, "", 0, false);
@@ -161,26 +235,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
                 mMediaPlayer = null;
             }
         }
-    }
-
-    private Uri getNotificationUri(String name) {
-        Uri baseUri = MediaStore.Audio.Media.INTERNAL_CONTENT_URI;
-        String selection = MediaStore.Audio.Media.DISPLAY_NAME + "=?";
-        String[] selectionArgs = {name + ".ogg"};
-        try (Cursor cursor = getContext().getContentResolver().query(
-                baseUri,
-                new String[]{MediaStore.Audio.Media._ID},
-                selection,
-                selectionArgs,
-                null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                long id = cursor.getLong(0);
-                return ContentUris.withAppendedId(baseUri, id);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to get notification URI: " + e.getMessage());
-        }
-        return null;
     }
 
     private void playPreviewSynced(String name, String type) {
@@ -213,7 +267,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
                     mMediaPlayer.start();
 
                     mMediaPlayer.setOnCompletionListener(mp -> {
-
                         if (wasEssentialActive) {
                             StatusManager.setEssentialLedActive(true);
                             AnimationManager.playEssential();
@@ -230,7 +283,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
                     });
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to play notification preview: " + e.getMessage());
-    
                     if (wasEssentialActive) {
                         StatusManager.setEssentialLedActive(true);
                         AnimationManager.playEssential();
@@ -245,6 +297,55 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
                 }
             }).start();
         }, 150);
+    }
+
+    private void playCustomAudioOnly(Uri uri) {
+        stopPreview();
+
+        mHandler.postDelayed(() -> {
+            mPreviewActive = true;
+            new Thread(() -> {
+                try {
+                    mMediaPlayer = new MediaPlayer();
+                    mMediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build());
+                    mMediaPlayer.setDataSource(getContext(), uri);
+                    mMediaPlayer.prepare();
+                    mMediaPlayer.start();
+
+                    mMediaPlayer.setOnCompletionListener(mp -> {
+                        mPreviewActive = false;
+                        mp.release();
+                        mMediaPlayer = null;
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to play custom notification sound: " + e.getMessage());
+                    mPreviewActive = false;
+                }
+            }).start();
+        }, 150);
+    }
+
+    private Uri getNotificationUri(String name) {
+        Uri baseUri = MediaStore.Audio.Media.INTERNAL_CONTENT_URI;
+        String selection = MediaStore.Audio.Media.DISPLAY_NAME + "=?";
+        String[] selectionArgs = {name + ".ogg"};
+        try (Cursor cursor = getContext().getContentResolver().query(
+                baseUri,
+                new String[]{MediaStore.Audio.Media._ID},
+                selection,
+                selectionArgs,
+                null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                long id = cursor.getLong(0);
+                return ContentUris.withAppendedId(baseUri, id);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get notification URI: " + e.getMessage());
+        }
+        return null;
     }
 
     @Override
@@ -262,15 +363,23 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         }
 
         if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS)) {
-            Uri soundUri = getNotificationUri(newValue.toString());
+            String value = newValue.toString();
+
+            if (Constants.GLYPH_NOTIFS_CUSTOM_VALUE.equals(value)) {
+                stopPreview();
+                openSoundPicker();
+                return false;
+            }
+
+            Uri soundUri = getNotificationUri(value);
             if (soundUri != null) {
                 RingtoneManager.setActualDefaultRingtoneUri(getContext(),
                         RingtoneManager.TYPE_NOTIFICATION, soundUri);
                 Log.d(TAG, "Notification sound set to: " + soundUri);
             } else {
-                Log.e(TAG, "Notification URI not found for: " + newValue.toString());
+                Log.e(TAG, "Notification URI not found for: " + value);
             }
-            playPreviewSynced(newValue.toString(), "notifications");
+            playPreviewSynced(value, "notifications");
         }
 
         return true;

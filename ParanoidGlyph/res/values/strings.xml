@@ -45,6 +45,8 @@
     <string name="glyph_settings_call_toggle_summary">Flash LEDs on incoming calls</string>
     <string name="glyph_settings_call_sub_toggle_title">Enable call animation</string>
     <string name="glyph_settings_call_sub_animations_title">Pattern</string>
+    <string name="glyph_settings_call_sub_custom_ringtone_title">Add ringtone</string>
+    <string name="glyph_settings_call_sub_custom_ringtone_set">Custom</string>
 
     <string name="glyph_settings_notifs_title">Notifications</string>
     <string name="glyph_settings_notifs_toggle_title">Notification animation</string>
@@ -54,6 +56,8 @@
     <string name="glyph_settings_notifs_sub_animations_title">Pattern</string>
     <string name="glyph_settings_notifs_sub_essential_title">Essential Notifications</string>
     <string name="glyph_settings_notifs_sub_essential_summary">Essential Glyph will be displayed until Essential notifications are read or dismissed</string>
+    <string name="glyph_settings_notifs_sub_custom_sound_title">Add notification</string>
+    <string name="glyph_settings_notifs_sub_custom_sound_set">Custom</string>
 
     <string name="glyph_settings_volume_title">Volume</string>
     <string name="glyph_settings_volume_level_toggle_title">Volume indicator</string>
