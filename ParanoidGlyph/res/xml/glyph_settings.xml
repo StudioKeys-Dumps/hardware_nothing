@@ -166,7 +166,7 @@
         <com.android.settingslib.widget.SliderPreference
             android:key="glyph_settings_thermal_cpu_threshold"
             android:title="@string/glyph_settings_thermal_cpu_threshold_title"
-            android:defaultValue="80"
+            android:defaultValue="85"
             android:dependency="glyph_settings_thermal_cpu_enable" />
 
     </PreferenceCategory>
