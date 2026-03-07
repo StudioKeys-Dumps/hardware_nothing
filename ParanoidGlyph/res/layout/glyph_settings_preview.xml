@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingLeft="16dp"
-    android:paddingRight="16dp">
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:orientation="vertical">
 
-    <LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:orientation="vertical"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="25dp"
-        android:paddingBottom="25dp"
+        android:layout_marginLeft="-24dp"
+        android:layout_marginRight="-24dp"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="28dp"
         android:background="@drawable/bg_protection_background">
 
         <include layout="@layout/glyph_settings_preview_device" />
 
-    </LinearLayout>
-
+    </FrameLayout>
 </LinearLayout>
