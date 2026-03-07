@@ -1,22 +1,23 @@
 /*
- * Copyright (C) 2022-2024 Paranoid Android
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2022-2024 Paranoid Android
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+* http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package co.aospa.glyph.Manager;
 
 import android.content.Context;
+import android.media.MediaMetadataRetriever;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -27,6 +28,8 @@ import com.android.internal.util.ArrayUtils;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -40,9 +43,34 @@ public final class AnimationManager {
 
     private static final String TAG = "GlyphAnimationManager";
     private static final boolean DEBUG = true;
-
+    private static final long RINGTONE_START_OFFSET_MS = 201L;
     private static Vibrator mVibrator;
     private static boolean vibratedThisCycle = false;
+
+    private static final Map<String, Double> RINGTONE_DURATION_MS = new HashMap<String, Double>() {{
+        put("Abra",       6993.521);
+        put("Beetle",     8732.875);
+        put("Bug",        9425.042);
+        put("Burrow",     7598.375);
+        put("Flutter",    8312.500);
+        put("Forever",   10388.729);
+        put("Karha",      3303.292);
+        put("Latency",    9801.042);
+        put("Molitor",    8000.000);
+        put("Pepelu",    11169.063);
+        put("Pet",        4497.375);
+        put("Plot",       5875.188);
+        put("Pneumatic",  5500.000);
+        put("Radiate",   10607.021);
+        put("Scribble",   4313.000);
+        put("Snaps",      7929.958);
+        put("Squirrels",  4770.604);
+        put("Sticks",     5033.750);
+        put("Tennis",     5848.208);
+        put("Wings",      7752.500);
+        put("WooYeh",     9933.188);
+        put("Wow",        7563.333);
+    }};
 
     private static Future<?> submit(Runnable runnable) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -116,6 +144,92 @@ public final class AnimationManager {
             return true;
         }
         return false;
+    }
+
+    private static double getRingtoneDurationMs(String name) {
+        Double mapped = RINGTONE_DURATION_MS.get(name);
+        if (mapped != null) {
+            if (DEBUG) Log.d(TAG, "Ringtone duration from map | name: " + name + " | ms: " + mapped);
+            return mapped;
+        }
+
+        String[] paths = {
+            "/product/media/audio/ringtones/" + name + ".ogg",
+            "/system/media/audio/ringtones/" + name + ".ogg",
+        };
+        for (String path : paths) {
+            try {
+                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                retriever.setDataSource(path);
+                String dur = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                retriever.release();
+                if (dur != null) {
+                    double ms = Double.parseDouble(dur);
+                    if (DEBUG) Log.d(TAG, "Ringtone duration measured | name: " + name + " | ms: " + ms);
+                    return ms;
+                }
+            } catch (Exception e) {
+                if (DEBUG) Log.d(TAG, "Could not read duration from: " + path);
+            }
+        }
+
+        Log.w(TAG, "Could not determine ringtone duration for: " + name);
+        return -1.0;
+    }
+
+    private static long playCallCycle(String name) {
+        long cycleStart = System.currentTimeMillis();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                ResourceUtils.getCallAnimation(name)))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!StatusManager.isCallLedEnabled() || checkInterruption("call")) break;
+
+                long frameStart = System.currentTimeMillis();
+
+                String cleanLine = line.replace(" ", "");
+                cleanLine = cleanLine.endsWith(",")
+                        ? cleanLine.substring(0, cleanLine.length() - 1) : cleanLine;
+                String[] pattern = cleanLine.split(",");
+
+                if (ArrayUtils.contains(
+                        Constants.getSupportedAnimationPatternLengths(), pattern.length)) {
+                    updateLedFrame(pattern);
+                } else {
+                    if (DEBUG) Log.d(TAG, "Line length mismatch | " + name);
+                    break;
+                }
+
+                long delay = 16L - (System.currentTimeMillis() - frameStart);
+                if (delay > 0) {
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Exception in call animation cycle | " + name, e);
+        }
+
+        return System.currentTimeMillis() - cycleStart;
+    }
+
+    private static void sleepInterruptible(long ms) {
+        if (ms <= 0) return;
+        long end = System.currentTimeMillis() + ms;
+        while (System.currentTimeMillis() < end) {
+            if (!StatusManager.isCallLedEnabled()) break;
+            try {
+                Thread.sleep(Math.min(20L, end - System.currentTimeMillis()));
+            } catch (InterruptedException e) {
+                break;
+            }
+        }
     }
 
     public static void playCsv(String name) {
@@ -266,7 +380,7 @@ public final class AnimationManager {
                         StatusManager.setVolumeLedLast(0);
                         updateLedFrame(new int[volumeArray.length]);
                         break;
-                    } else if ( i <= amount - 1 && volumeLevel > 0) {
+                    } else if (i <= amount - 1 && volumeLevel > 0) {
                         if (checkInterruption("volume")) throw new InterruptedException();
                         StatusManager.setVolumeLedLast(i);
                         volumeArray[i] = Constants.getBrightness();
@@ -321,45 +435,49 @@ public final class AnimationManager {
             if (!check("call: " + name, true)) return;
 
             StatusManager.setCallLedActive(true);
+            Log.d(TAG, "Starting call animation loop | name: " + name);
 
-            Log.d(TAG, "Playing call animation once | name: " + name);
+            if (RINGTONE_START_OFFSET_MS > 0) {
+                sleepInterruptible(RINGTONE_START_OFFSET_MS);
+            }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    ResourceUtils.getCallAnimation(name)))) {
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!StatusManager.isCallLedEnabled() || checkInterruption("call")) break;
-
-                    long frameStart = System.currentTimeMillis();
-
-                    String cleanLine = line.replace(" ", "");
-                    cleanLine = cleanLine.endsWith(",") ? cleanLine.substring(0, cleanLine.length() - 1) : cleanLine;
-                    String[] pattern = cleanLine.split(",");
-
-                    if (ArrayUtils.contains(Constants.getSupportedAnimationPatternLengths(), pattern.length)) {
-                        updateLedFrame(pattern);
-                    } else {
-                        if (DEBUG) Log.d(TAG, "Line length mismatch | " + name);
-                        break;
-                    }
-
-                    long delay = 16L - (System.currentTimeMillis() - frameStart);
-                    if (delay > 0) {
-                        try {
-                            Thread.sleep(delay);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Exception in call animation | " + name, e);
-            } finally {
+            if (!StatusManager.isCallLedEnabled()) {
                 updateLedFrame(new float[5]);
                 StatusManager.setCallLedActive(false);
-                Log.d(TAG, "Call animation finished (one cycle) | " + name);
+                return;
             }
+
+            final double ringtoneDurationMs = getRingtoneDurationMs(name);
+            final long anchorStart = System.currentTimeMillis();
+            int cycle = 0;
+
+            while (StatusManager.isCallLedEnabled()) {
+                long cycleDuration = playCallCycle(name);
+
+                if (!StatusManager.isCallLedEnabled()) break;
+
+                cycle++;
+                double nextCycleTargetExact = anchorStart + ((double) cycle * ringtoneDurationMs);
+                long nextCycleTarget = Math.round(nextCycleTargetExact);
+                long now = System.currentTimeMillis();
+                long gap = nextCycleTarget - now;
+
+                if (DEBUG) Log.d(TAG, "Cycle " + cycle + " sync"
+                        + " | csvDuration: " + cycleDuration + "ms"
+                        + " | gap: " + gap + "ms"
+                        + " | ringtone: " + ringtoneDurationMs + "ms");
+
+                if (gap > 0) {
+                    updateLedFrame(new float[5]);
+                    sleepInterruptible(gap);
+                } else {
+                    if (DEBUG) Log.d(TAG, "Cycle " + cycle + " overran by " + (-gap) + "ms");
+                }
+            }
+
+            updateLedFrame(new float[5]);
+            StatusManager.setCallLedActive(false);
+            Log.d(TAG, "Call animation loop stopped | " + name);
         });
     }
 
@@ -397,7 +515,6 @@ public final class AnimationManager {
             updateLedSingle(led, (float) Constants.getMaxBrightness() / 100 * 7);
             return;
         }
-
     }
 
     public static void stopEssential() {
