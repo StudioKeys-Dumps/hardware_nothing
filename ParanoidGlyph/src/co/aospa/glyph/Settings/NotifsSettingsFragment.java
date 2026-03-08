@@ -3,15 +3,6 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package co.aospa.glyph.Settings;
@@ -43,7 +34,6 @@ import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.internal.util.ArrayUtils;
-import com.android.settingslib.widget.MainSwitchPreference;
 import com.android.settingslib.widget.SettingsBasePreferenceFragment;
 
 import java.util.ArrayList;
@@ -57,7 +47,6 @@ import co.aospa.glyph.Manager.SettingsManager;
 import co.aospa.glyph.Manager.StatusManager;
 import co.aospa.glyph.Preference.GlyphAnimationPreference;
 import co.aospa.glyph.Utils.ResourceUtils;
-import co.aospa.glyph.Utils.ServiceUtils;
 
 public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
         implements OnPreferenceChangeListener {
@@ -66,8 +55,8 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
 
     private PreferenceScreen mScreen;
     private PreferenceCategory mCategory;
-    private List<String> mEssentialApps = new ArrayList<String>();
-    private List<String> mEssentialAppsNames = new ArrayList<String>();
+    private List<String> mEssentialApps = new ArrayList<>();
+    private List<String> mEssentialAppsNames = new ArrayList<>();
     private PackageManager mPackageManager;
     private ListPreference mListPreference;
     private MultiSelectListPreference mMultiSelectListPreference;
@@ -89,10 +78,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
         mScreen = this.getPreferenceScreen();
         getActivity().setTitle(R.string.glyph_settings_notifs_toggle_title);
 
-        MainSwitchPreference switchBar = findPreference(Constants.GLYPH_NOTIFS_SUB_ENABLE);
-        switchBar.setOnPreferenceChangeListener(this);
-        switchBar.setChecked(SettingsManager.isGlyphNotifsEnabled());
-
         mCategory = (PreferenceCategory) findPreference(Constants.GLYPH_NOTIFS_SUB_CATEGORY);
 
         mListPreference = (ListPreference) findPreference(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS);
@@ -100,7 +85,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
         populateAnimationList();
 
         mGlyphAnimationPreference = (GlyphAnimationPreference) findPreference(Constants.GLYPH_NOTIFS_SUB_PREVIEW);
-
         if (mGlyphAnimationPreference != null) {
             mGlyphAnimationPreference.setAnimationType("notification");
         }
@@ -108,6 +92,7 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
         mPackageManager = getActivity().getPackageManager();
         List<ApplicationInfo> mApps = mPackageManager.getInstalledApplications(PackageManager.GET_GIDS);
         Collections.sort(mApps, new ApplicationInfo.DisplayNameComparator(mPackageManager));
+
         for (ApplicationInfo app : mApps) {
             if (mPackageManager.getLaunchIntentForPackage(app.packageName) != null
                     && !ArrayUtils.contains(Constants.APPS_TO_IGNORE, app.packageName)) {
@@ -351,16 +336,6 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
     @Override
     public boolean onPreferenceChange(Preference preference, Object newValue) {
         final String preferenceKey = preference.getKey();
-
-        if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ENABLE)) {
-            boolean isChecked = (Boolean) newValue;
-            SettingsManager.setGlyphNotifsEnabled(isChecked);
-            ServiceUtils.checkGlyphService();
-            if (mGlyphAnimationPreference != null) {
-                mGlyphAnimationPreference.updateAnimation(isChecked,
-                        SettingsManager.getGlyphNotifsAnimation(), 0, false);
-            }
-        }
 
         if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS)) {
             String value = newValue.toString();

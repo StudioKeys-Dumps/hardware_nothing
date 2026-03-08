@@ -3,15 +3,6 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package co.aospa.glyph.Settings;
@@ -38,7 +29,6 @@ import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceScreen;
 
 import com.android.internal.util.ArrayUtils;
-import com.android.settingslib.widget.MainSwitchPreference;
 import com.android.settingslib.widget.SettingsBasePreferenceFragment;
 
 import co.aospa.glyph.R;
@@ -47,7 +37,6 @@ import co.aospa.glyph.Manager.AnimationManager;
 import co.aospa.glyph.Manager.SettingsManager;
 import co.aospa.glyph.Preference.GlyphAnimationPreference;
 import co.aospa.glyph.Utils.ResourceUtils;
-import co.aospa.glyph.Utils.ServiceUtils;
 
 public class CallSettingsFragment extends SettingsBasePreferenceFragment
         implements OnPreferenceChangeListener {
@@ -72,10 +61,6 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
         addPreferencesFromResource(R.xml.glyph_call_settings);
         mScreen = this.getPreferenceScreen();
         getActivity().setTitle(R.string.glyph_settings_call_toggle_title);
-
-        MainSwitchPreference switchBar = findPreference(Constants.GLYPH_CALL_SUB_ENABLE);
-        switchBar.setOnPreferenceChangeListener(this);
-        switchBar.setChecked(SettingsManager.isGlyphCallEnabled());
 
         mListPreference = (ListPreference) findPreference(Constants.GLYPH_CALL_SUB_ANIMATIONS);
         mListPreference.setOnPreferenceChangeListener(this);
@@ -165,29 +150,6 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
 
         playCustomAudioOnly(uri);
     }
-
-    private String resolveCustomRingtoneName() {
-        String uriString = SettingsManager.getGlyphCallCustomRingtoneUri();
-        if (uriString == null || uriString.isEmpty()) {
-            return getString(R.string.glyph_settings_call_sub_custom_ringtone_title);
-        }
-        try (Cursor cursor = getContext().getContentResolver().query(
-                Uri.parse(uriString),
-                new String[]{MediaStore.Audio.Media.DISPLAY_NAME},
-                null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                String name = cursor.getString(0);
-                if (name != null && name.contains(".")) {
-                    name = name.substring(0, name.lastIndexOf('.'));
-                }
-                return name;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to resolve ringtone name: " + e.getMessage());
-        }
-        return getString(R.string.glyph_settings_call_sub_custom_ringtone_title);
-    }
-
 
     private void stopPreview() {
         mPreviewActive = false;
@@ -341,13 +303,6 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
     @Override
     public boolean onPreferenceChange(Preference preference, Object newValue) {
         final String preferenceKey = preference.getKey();
-
-        if (preferenceKey.equals(Constants.GLYPH_CALL_SUB_ENABLE)) {
-            boolean isChecked = (Boolean) newValue;
-            SettingsManager.setGlyphCallEnabled(isChecked);
-            ServiceUtils.checkGlyphService();
-            mGlyphAnimationPreference.updateAnimation(isChecked, SettingsManager.getGlyphCallAnimation());
-        }
 
         if (preferenceKey.equals(Constants.GLYPH_CALL_SUB_ANIMATIONS)) {
             String value = newValue.toString();

@@ -22,9 +22,9 @@
         android:key="glyph_settings_call_sub_preview"
         android:selectable="false" />
 
-    <com.android.settingslib.widget.MainSwitchPreference
-        android:key="glyph_settings_call_sub_toggle"
-        android:title="@string/glyph_settings_call_sub_toggle_title" />
+    <PreferenceCategory
+        android:title="@string/glyph_settings_call_sounds_title"
+        android:key="glyph_call_sounds_category">
 
         <ListPreference
             android:key="glyph_settings_call_sub_animations"
@@ -32,5 +32,7 @@
             android:defaultValue="@string/glyph_settings_call_animations_default"
             android:layout="@layout/preference"
             android:summary="%s" />
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

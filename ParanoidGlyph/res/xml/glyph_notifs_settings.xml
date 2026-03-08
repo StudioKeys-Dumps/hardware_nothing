@@ -22,9 +22,9 @@
         android:key="glyph_settings_notifs_sub_preview"
         android:selectable="false" />
 
-    <com.android.settingslib.widget.MainSwitchPreference
-        android:key="glyph_settings_notifs_sub_toggle"
-        android:title="@string/glyph_settings_notifs_sub_toggle_title" />
+    <PreferenceCategory
+        android:title="@string/glyph_settings_notifs_sounds_title"
+        android:key="glyph_notifs_sounds_category">
 
         <ListPreference
             android:key="glyph_settings_notifs_sub_animations"
@@ -33,19 +33,21 @@
             android:layout="@layout/preference"
             android:summary="%s" />
 
-        <MultiSelectListPreference
-            android:key="glyph_settings_notifs_sub_essential"
-            android:title="@string/glyph_settings_notifs_sub_essential_title"
-            android:dialogTitle="@string/glyph_settings_notifs_sub_essential_title"
-            android:entries="@array/glyph_settings_empty_array_string"
-            android:entryValues="@array/glyph_settings_empty_array_string"
-            android:summary="@string/glyph_settings_notifs_sub_essential_summary"
-            android:defaultValue="@array/glyph_settings_empty_array_string"
-            android:positiveButtonText="@android:string/ok"
-            android:negativeButtonText="@android:string/cancel" />
+    </PreferenceCategory>
 
-        <PreferenceCategory
-            android:key="glyph_settings_notifs_sub"
-            android:title="@string/glyph_settings_notifs_sub_title" />
+    <MultiSelectListPreference
+        android:key="glyph_settings_notifs_sub_essential"
+        android:title="@string/glyph_settings_notifs_sub_essential_title"
+        android:dialogTitle="@string/glyph_settings_notifs_sub_essential_title"
+        android:entries="@array/glyph_settings_empty_array_string"
+        android:entryValues="@array/glyph_settings_empty_array_string"
+        android:summary="@string/glyph_settings_notifs_sub_essential_summary"
+        android:defaultValue="@array/glyph_settings_empty_array_string"
+        android:positiveButtonText="@android:string/ok"
+        android:negativeButtonText="@android:string/cancel" />
+
+    <PreferenceCategory
+        android:key="glyph_settings_notifs_sub"
+        android:title="@string/glyph_settings_notifs_sub_title" />
 
 </PreferenceScreen>
