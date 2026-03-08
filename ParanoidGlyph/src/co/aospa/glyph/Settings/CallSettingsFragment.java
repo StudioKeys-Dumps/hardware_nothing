@@ -1,22 +1,23 @@
 /*
- * Copyright (C) 2022-2024 Paranoid Android
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2022-2024 Paranoid Android
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package co.aospa.glyph.Settings;
 
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.media.AudioAttributes;
@@ -39,6 +40,9 @@ import androidx.preference.PreferenceScreen;
 import com.android.internal.util.ArrayUtils;
 import com.android.settingslib.widget.SettingsBasePreferenceFragment;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import co.aospa.glyph.R;
 import co.aospa.glyph.Constants.Constants;
 import co.aospa.glyph.Manager.AnimationManager;
@@ -50,6 +54,7 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
         implements OnPreferenceChangeListener {
 
     private static final String TAG = "GlyphCallSettingsFragment";
+    private static final String CUSTOM_RINGTONE_FILENAME = "glyph_custom_ringtone";
 
     private PreferenceScreen mScreen;
     private ListPreference mListPreference;
@@ -118,32 +123,93 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("audio/*");
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         mRingtonePickerLauncher.launch(intent);
     }
 
     private void onRingtonePickerResult(ActivityResult result) {
-        if (result.getData() == null) {
-            String prev = SettingsManager.getGlyphCallAnimation();
-            mListPreference.setValue(prev);
+        if (result.getData() == null || result.getData().getData() == null) {
+            mListPreference.setValue(SettingsManager.getGlyphCallAnimation());
             return;
         }
 
-        Uri uri = result.getData().getData();
-        if (uri == null) {
-            String prev = SettingsManager.getGlyphCallAnimation();
-            mListPreference.setValue(prev);
-            return;
+        Uri sourceUri = result.getData().getData();
+
+        new Thread(() -> {
+            Uri mediaStoreUri = copyToMediaStore(sourceUri);
+            if (mediaStoreUri == null) {
+                Log.e(TAG, "Failed to copy ringtone to MediaStore");
+                getActivity().runOnUiThread(() ->
+                        mListPreference.setValue(SettingsManager.getGlyphCallAnimation()));
+                return;
+            }
+
+            RingtoneManager.setActualDefaultRingtoneUri(
+                    getContext(), RingtoneManager.TYPE_RINGTONE, mediaStoreUri);
+            SettingsManager.setGlyphCallCustomRingtoneUri(mediaStoreUri.toString());
+            Log.d(TAG, "Custom ringtone set to MediaStore URI: " + mediaStoreUri);
+
+            final Uri finalUri = mediaStoreUri;
+            getActivity().runOnUiThread(() -> {
+                mListPreference.setValue(Constants.GLYPH_CALL_CUSTOM_VALUE);
+                mListPreference.setSummary(getString(R.string.glyph_settings_call_sub_custom_ringtone_set));
+                playCustomAudioOnly(finalUri);
+            });
+        }).start();
+    }
+
+    private Uri copyToMediaStore(Uri sourceUri) {
+        try {
+            String mimeType = getContext().getContentResolver().getType(sourceUri);
+            if (mimeType == null) mimeType = "audio/mpeg";
+            String extension = mimeType.contains("ogg") ? ".ogg"
+                    : mimeType.contains("flac") ? ".flac"
+                    : mimeType.contains("wav") ? ".wav"
+                    : ".mp3";
+            String fileName = CUSTOM_RINGTONE_FILENAME + extension;
+
+            getContext().getContentResolver().delete(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    MediaStore.Audio.Media.DISPLAY_NAME + "=?",
+                    new String[]{fileName});
+
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Audio.Media.DISPLAY_NAME, fileName);
+            values.put(MediaStore.Audio.Media.MIME_TYPE, mimeType);
+            values.put(MediaStore.Audio.Media.IS_RINGTONE, 1);
+            values.put(MediaStore.Audio.Media.IS_NOTIFICATION, 0);
+            values.put(MediaStore.Audio.Media.IS_ALARM, 0);
+            values.put(MediaStore.Audio.Media.IS_MUSIC, 0);
+            values.put(MediaStore.Audio.Media.RELATIVE_PATH, "Ringtones/");
+
+            Uri newUri = getContext().getContentResolver().insert(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values);
+            if (newUri == null) {
+                Log.e(TAG, "MediaStore insert returned null");
+                return null;
+            }
+
+            try (InputStream in = getContext().getContentResolver().openInputStream(sourceUri);
+                 OutputStream out = getContext().getContentResolver().openOutputStream(newUri)) {
+                if (in == null || out == null) {
+                    Log.e(TAG, "Failed to open streams for copy");
+                    return null;
+                }
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+
+            Log.d(TAG, "Ringtone copied to MediaStore: " + newUri);
+            return newUri;
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error copying ringtone to MediaStore: " + e.getMessage());
+            return null;
         }
-
-        SettingsManager.setGlyphCallCustomRingtoneUri(uri.toString());
-        RingtoneManager.setActualDefaultRingtoneUri(
-                getContext(), RingtoneManager.TYPE_RINGTONE, uri);
-        Log.d(TAG, "Custom ringtone set to: " + uri);
-
-        mListPreference.setValue(Constants.GLYPH_CALL_CUSTOM_VALUE);
-        mListPreference.setSummary(getString(R.string.glyph_settings_call_sub_custom_ringtone_set));
-
-        playCustomAudioOnly(uri);
     }
 
     private void stopPreview() {

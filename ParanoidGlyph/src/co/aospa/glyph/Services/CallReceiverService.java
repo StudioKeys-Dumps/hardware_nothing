@@ -1,18 +1,18 @@
 /*
- * Copyright (C) 2022-2024 Paranoid Android
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2022-2024 Paranoid Android
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package co.aospa.glyph.Services;
 
@@ -28,6 +28,7 @@ import android.util.Log;
 
 import java.util.concurrent.Executors;
 
+import co.aospa.glyph.Constants.Constants;
 import co.aospa.glyph.Manager.AnimationManager;
 import co.aospa.glyph.Manager.SettingsManager;
 
@@ -74,7 +75,10 @@ public class CallReceiverService extends Service {
     private void enableCallAnimation() {
         if (DEBUG) Log.d(TAG, "enableCallAnimation");
         if (SettingsManager.isGlyphCallEnabled()) {
-            AnimationManager.playCall(SettingsManager.getGlyphCallAnimation());
+            String anim = SettingsManager.getGlyphCallAnimation();
+            if (!Constants.GLYPH_CALL_CUSTOM_VALUE.equals(anim)) {
+                AnimationManager.playCall(anim);
+            }
         }
     }
 
@@ -88,15 +92,15 @@ public class CallReceiverService extends Service {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(TelephonyManager.ACTION_PHONE_STATE_CHANGED)) {
                 String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
-                if(state.equals(TelephonyManager.EXTRA_STATE_RINGING)){
+                if (state.equals(TelephonyManager.EXTRA_STATE_RINGING)) {
                     if (DEBUG) Log.d(TAG, "EXTRA_STATE_RINGING");
                     enableCallAnimation();
                 }
-                if ((state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK))){
+                if (state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK)) {
                     if (DEBUG) Log.d(TAG, "EXTRA_STATE_OFFHOOK");
                     disableCallAnimation();
                 }
-                if (state.equals(TelephonyManager.EXTRA_STATE_IDLE)){
+                if (state.equals(TelephonyManager.EXTRA_STATE_IDLE)) {
                     if (DEBUG) Log.d(TAG, "EXTRA_STATE_IDLE");
                     disableCallAnimation();
                 }

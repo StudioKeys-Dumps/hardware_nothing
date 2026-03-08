@@ -47,6 +47,7 @@ public final class AnimationManager {
     private static Vibrator mVibrator;
     private static boolean vibratedThisCycle = false;
 
+
     private static final Map<String, Double> RINGTONE_DURATION_MS = new HashMap<String, Double>() {{
         put("Abra",       6993.521);
         put("Beetle",     8732.875);
