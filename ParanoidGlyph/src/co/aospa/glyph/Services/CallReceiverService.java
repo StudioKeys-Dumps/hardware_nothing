@@ -73,7 +73,9 @@ public class CallReceiverService extends Service {
 
     private void enableCallAnimation() {
         if (DEBUG) Log.d(TAG, "enableCallAnimation");
-        AnimationManager.playCall(SettingsManager.getGlyphCallAnimation());
+        if (SettingsManager.isGlyphCallEnabled()) {
+            AnimationManager.playCall(SettingsManager.getGlyphCallAnimation());
+        }
     }
 
     private void disableCallAnimation() {

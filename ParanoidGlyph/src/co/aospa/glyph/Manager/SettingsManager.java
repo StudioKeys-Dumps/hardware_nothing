@@ -75,13 +75,15 @@ public final class SettingsManager {
     }
 
     public static boolean isGlyphCallEnabled() {
-        return Settings.Secure.getInt(context.getContentResolver(),
-                Constants.GLYPH_CALL_ENABLE, 1) != 0 && isGlyphEnabled();
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("glyph_settings_call_toggle", true) && isGlyphEnabled();
     }
 
     public static boolean setGlyphCallEnabled(boolean enable) {
-        return Settings.Secure.putInt(context.getContentResolver(),
-                Constants.GLYPH_CALL_ENABLE, enable ? 1 : 0);
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putBoolean("glyph_settings_call_toggle", enable)
+                .commit();
     }
 
     public static String getGlyphCallAnimation() {
@@ -113,13 +115,15 @@ public final class SettingsManager {
     }
 
     public static boolean isGlyphNotifsEnabled() {
-        return Settings.Secure.getInt(context.getContentResolver(),
-                Constants.GLYPH_NOTIFS_ENABLE, 1) != 0 && isGlyphEnabled();
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean("glyph_settings_notifs_toggle", true) && isGlyphEnabled();
     }
 
     public static boolean setGlyphNotifsEnabled(boolean enable) {
-        return Settings.Secure.putInt(context.getContentResolver(),
-                Constants.GLYPH_NOTIFS_ENABLE, enable ? 1 : 0);
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putBoolean("glyph_settings_notifs_toggle", enable)
+                .commit();
     }
 
     public static String getGlyphNotifsAnimation() {
