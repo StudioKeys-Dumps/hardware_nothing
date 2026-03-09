@@ -31,6 +31,7 @@ import co.aospa.glyph.Services.FlipToGlyphService;
 import co.aospa.glyph.Services.MusicVisualizerService;
 import co.aospa.glyph.Services.PowershareService;
 import co.aospa.glyph.Services.ThirdPartyService;
+import co.aospa.glyph.Services.CameraRecordingService;
 import co.aospa.glyph.Services.VolumeLevelService;
 
 public final class ServiceUtils {
@@ -124,10 +125,23 @@ public final class ServiceUtils {
                 UserHandle.CURRENT);
     }
 
+    private static void startCameraRecordingService() {
+        if (DEBUG) Log.d(TAG, "Starting Camera Recording service");
+        context.startServiceAsUser(new Intent(context, CameraRecordingService.class),
+                UserHandle.CURRENT);
+    }
+
+    private static void stopCameraRecordingService() {
+        if (DEBUG) Log.d(TAG, "Stopping Camera Recording service");
+        context.stopServiceAsUser(new Intent(context, CameraRecordingService.class),
+                UserHandle.CURRENT);
+    }
+
     public static void checkGlyphService() {
         if (SettingsManager.isGlyphEnabled()) {
             Constants.setBrightness(SettingsManager.getGlyphBrightness());
             startThirdPartyService();
+            startCameraRecordingService();
             if (SettingsManager.isGlyphChargingEnabled()) {
                 startChargingService();
             } else {
@@ -166,6 +180,7 @@ public final class ServiceUtils {
             stopMusicVisualizerService();
             stopVolumeLevelService();
             stopThirdPartyService();
+            stopCameraRecordingService();
         }
     }
 }
