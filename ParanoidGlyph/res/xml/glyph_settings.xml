@@ -90,6 +90,25 @@
             android:summary="@string/glyph_settings_volume_level_toggle_summary" />
 
     <PreferenceCategory
+        android:key="glyph_settings_gesture"
+        android:title="@string/glyph_settings_gesture_title" />
+
+        <SwitchPreferenceCompat
+            android:key="glyph_settings_shake_torch_toggle"
+            android:defaultValue="false"
+            android:title="@string/glyph_settings_shake_torch_toggle_title"
+            android:summary="@string/glyph_settings_shake_torch_toggle_summary" />
+
+        <SeekBarPreference
+            android:key="glyph_settings_shake_sensitivity"
+            android:title="@string/glyph_settings_shake_sensitivity_title"
+            android:summary="@string/glyph_settings_shake_sensitivity_summary"
+            android:min="20"
+            android:max="55"
+            android:defaultValue="35"
+            android:dependency="glyph_settings_shake_torch_toggle" />
+
+    <PreferenceCategory
         android:key="glyph_settings_misc"
         android:title="@string/glyph_settings_misc_title" />
 

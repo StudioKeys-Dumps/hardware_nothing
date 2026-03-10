@@ -74,4 +74,11 @@
     <string name="glyph_accessibility_quick_settings_off">Off</string>
     <string name="glyph_accessibility_quick_settings_on">On</string>
 
+    <!-- Gesture Settings -->
+    <string name="glyph_settings_gesture_title">Gesture</string>
+    <string name="glyph_settings_shake_torch_toggle_title">Shake to toggle torch</string>
+    <string name="glyph_settings_shake_torch_toggle_summary">Shake your device to turn Glyph torch on or off (restart device)</string>
+    <string name="glyph_settings_shake_sensitivity_title">Shake sensitivity</string>
+    <string name="glyph_settings_shake_sensitivity_summary">Adjust how hard you need to shake (lower = more sensitive)</string>
+
 </resources>

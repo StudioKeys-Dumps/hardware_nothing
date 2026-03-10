@@ -57,6 +57,8 @@ public final class Constants {
     public static final String GLYPH_NOTIFS_SUB_CUSTOM_SOUND_URI = "glyph_settings_notifs_sub_custom_sound_uri";
     public static final String GLYPH_NOTIFS_CUSTOM_VALUE = "__custom_notif__";
     public static final String GLYPH_VOLUME_LEVEL_ENABLE = "glyph_settings_volume_level_toggle";
+    public static final String GLYPH_SHAKE_TORCH_ENABLE = "glyph_settings_shake_torch_toggle";
+    public static final String GLYPH_SHAKE_SENSITIVITY = "glyph_settings_shake_sensitivity";
 
     public static final String[] APPS_TO_IGNORE = {
         "android",
