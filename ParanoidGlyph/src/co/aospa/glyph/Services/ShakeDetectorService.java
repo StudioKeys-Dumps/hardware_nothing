@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,6 @@ import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.preference.PreferenceManager;
 
@@ -180,8 +179,6 @@ public class ShakeDetectorService extends Service implements SensorEventListener
                     Constants.getMaxBrightness() / 100 * 7);
             }
             
-            showToastNotification(newState);
-            
             if (DEBUG) Log.d(TAG, "Torch toggled to: " + (newState ? "ON" : "OFF"));
             
         } catch (Exception e) {
@@ -202,15 +199,6 @@ public class ShakeDetectorService extends Service implements SensorEventListener
             }
             if (DEBUG) Log.d(TAG, "Haptic feedback triggered");
         }
-    }
-
-    private void showToastNotification(boolean torchOn) {
-        android.os.Handler handler = new android.os.Handler(getMainLooper());
-        handler.post(() -> {
-            String message = torchOn ? "Glyph Torch ON" : "Glyph Torch OFF";
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-            if (DEBUG) Log.d(TAG, "Toast shown: " + message);
-        });
     }
 
     @Override
