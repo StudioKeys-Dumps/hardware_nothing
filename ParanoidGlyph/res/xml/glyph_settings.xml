@@ -104,8 +104,8 @@
             android:title="@string/glyph_settings_shake_sensitivity_title"
             android:summary="@string/glyph_settings_shake_sensitivity_summary"
             android:min="20"
-            android:max="55"
-            android:defaultValue="35"
+            android:max="60"
+            android:defaultValue="40"
             android:dependency="glyph_settings_shake_torch_toggle" />
 
     <PreferenceCategory

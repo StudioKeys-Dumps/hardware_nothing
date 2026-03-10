@@ -106,8 +106,15 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mShakeTorchPreference.setOnPreferenceChangeListener(this);
 
         mShakeSensitivityPreference = (SliderPreference) findPreference(Constants.GLYPH_SHAKE_SENSITIVITY);
-        mShakeSensitivityPreference.setUpdatesContinuously(false);
-        mShakeSensitivityPreference.setOnPreferenceChangeListener(this);
+        if (mShakeSensitivityPreference != null) {
+            mShakeSensitivityPreference.setMin(20);
+            mShakeSensitivityPreference.setMax(60);
+            mShakeSensitivityPreference.setSliderIncrement(5);
+            mShakeSensitivityPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
+            mShakeSensitivityPreference.setTickVisible(true);
+            mShakeSensitivityPreference.setUpdatesContinuously(true);
+            mShakeSensitivityPreference.setOnPreferenceChangeListener(this);
+        }
 
         mMusicVisualizerPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_MUSIC_VISUALIZER_ENABLE);
         mMusicVisualizerPreference.setOnPreferenceChangeListener(this);
