@@ -99,7 +99,7 @@
             android:title="@string/glyph_settings_shake_torch_toggle_title"
             android:summary="@string/glyph_settings_shake_torch_toggle_summary" />
 
-        <SeekBarPreference
+        <com.android.settingslib.widget.SliderPreference
             android:key="glyph_settings_shake_sensitivity"
             android:title="@string/glyph_settings_shake_sensitivity_title"
             android:summary="@string/glyph_settings_shake_sensitivity_summary"

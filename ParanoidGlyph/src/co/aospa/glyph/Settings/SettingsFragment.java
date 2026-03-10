@@ -26,7 +26,6 @@ import android.os.Handler;
 import android.provider.Settings;
 import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
-import androidx.preference.SeekBarPreference;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.settingslib.PrimarySwitchPreference;
@@ -50,7 +49,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private SwitchPreferenceCompat mChargingPowersharePreference;
     private SwitchPreferenceCompat mVolumeLevelPreference;
     private SwitchPreferenceCompat mShakeTorchPreference;
-    private SeekBarPreference mShakeSensitivityPreference;
+    private SliderPreference mShakeSensitivityPreference;
     private SwitchPreferenceCompat mMusicVisualizerPreference;
 
     private ContentResolver mContentResolver;
@@ -106,7 +105,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mShakeTorchPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_SHAKE_TORCH_ENABLE);
         mShakeTorchPreference.setOnPreferenceChangeListener(this);
 
-        mShakeSensitivityPreference = (SeekBarPreference) findPreference(Constants.GLYPH_SHAKE_SENSITIVITY);
+        mShakeSensitivityPreference = (SliderPreference) findPreference(Constants.GLYPH_SHAKE_SENSITIVITY);
         mShakeSensitivityPreference.setUpdatesContinuously(false);
         mShakeSensitivityPreference.setOnPreferenceChangeListener(this);
 
