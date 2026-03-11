@@ -154,4 +154,9 @@ public final class SettingsManager {
                 .getStringSet(Constants.GLYPH_NOTIFS_SUB_ESSENTIAL, new HashSet<String>());
         return selectedValues.contains(app) && isGlyphNotifsEnabled();
     }
+
+    public static boolean isGlyphShakeTorchEnabled() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(Constants.GLYPH_SHAKE_TORCH_ENABLE, false) && isGlyphEnabled();
+    }
 }
