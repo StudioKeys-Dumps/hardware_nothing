@@ -167,20 +167,22 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         if (preferenceKey.equals(Constants.GLYPH_SHAKE_TORCH_ENABLE)) {
             boolean enabled = (Boolean) newValue;
-            if (enabled) {
-                ShakeManager.startShakeService(getContext());
-            } else {
-                ShakeManager.stopShakeService(getContext());
-            }
             mShakeSensitivityPreference.setEnabled(enabled);
-            return true;
+            mHandler.postDelayed(() -> {
+                if (enabled) {
+                    ShakeManager.startShakeService(getContext());
+                } else {
+                    ShakeManager.stopShakeService(getContext());
+                }
+            }, 100);
         }
 
         if (preferenceKey.equals(Constants.GLYPH_SHAKE_SENSITIVITY)) {
             if (mShakeTorchPreference.isChecked()) {
-                ShakeManager.restartShakeService(getContext());
+                mHandler.postDelayed(() -> {
+                    ShakeManager.restartShakeService(getContext());
+                }, 100);
             }
-            return true;
         }
 
         if (preferenceKey.equals(Constants.GLYPH_MUSIC_VISUALIZER_ENABLE)) {
