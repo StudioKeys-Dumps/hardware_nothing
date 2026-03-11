@@ -46,6 +46,7 @@ public class ShakeDetectorService extends Service implements SensorEventListener
     
     private static final int SHAKE_TIME_WINDOW = 500; 
     private static final int SHAKE_COUNT_THRESHOLD = 2;
+    private static final int SHAKE_COOLDOWN = 1000;
     
     private static final int DEFAULT_SENSITIVITY = 35;
     
@@ -56,6 +57,7 @@ public class ShakeDetectorService extends Service implements SensorEventListener
     private Vibrator mVibrator;
     
     private long mLastShakeTime = 0;
+    private long mLastTorchToggleTime = 0;
     private int mShakeCount = 0;
     private float mCurrentThreshold = DEFAULT_SENSITIVITY;
 
@@ -158,6 +160,13 @@ public class ShakeDetectorService extends Service implements SensorEventListener
     }
 
     private void onShakeDetected() {
+        long currentTime = SystemClock.elapsedRealtime();
+        if (currentTime - mLastTorchToggleTime < SHAKE_COOLDOWN) {
+            if (DEBUG) Log.d(TAG, "Shake ignored due to cooldown");
+            return;
+        }
+        mLastTorchToggleTime = currentTime;
+
         if (DEBUG) Log.d(TAG, "Shake gesture triggered, toggling torch");
         
         performHapticFeedback();
