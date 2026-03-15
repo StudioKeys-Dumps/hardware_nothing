@@ -28,7 +28,7 @@ import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceScreen;
-import androidx.preference.SwitchPreference;
+import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.settingslib.widget.MainSwitchPreference;
@@ -90,12 +90,14 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         List<ApplicationInfo> mApps = mPackageManager.getInstalledApplications(PackageManager.GET_GIDS);
         Collections.sort(mApps, new ApplicationInfo.DisplayNameComparator(mPackageManager));
         for (ApplicationInfo app : mApps) {
-            if(mPackageManager.getLaunchIntentForPackage(app.packageName) != null  && !ArrayUtils.contains(Constants.APPS_TO_IGNORE, app.packageName)) { // apps with launcher intent
-                SwitchPreference mSwitchPreference = new SwitchPreference(mScreen.getContext());
+            if (mPackageManager.getLaunchIntentForPackage(app.packageName) != null
+                    && !ArrayUtils.contains(Constants.APPS_TO_IGNORE, app.packageName)) {
+                SwitchPreferenceCompat mSwitchPreference = new SwitchPreferenceCompat(mScreen.getContext());
                 mSwitchPreference.setKey(app.packageName);
-                mSwitchPreference.setTitle(" " + app.loadLabel(mPackageManager).toString()); // add this space since the layout looks off otherwise
+                mSwitchPreference.setTitle(" " + app.loadLabel(mPackageManager).toString());
                 mSwitchPreference.setIcon(app.loadIcon(mPackageManager));
                 mSwitchPreference.setDefaultValue(true);
+                mSwitchPreference.setWidgetLayoutResource(R.layout.preference_widget_switch_compat);
                 mSwitchPreference.setOnPreferenceChangeListener(this);
                 mCategory.addPreference(mSwitchPreference);
 
@@ -108,11 +110,10 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         mMultiSelectListPreference.setOnPreferenceChangeListener(this);
         mMultiSelectListPreference.setEntries(mEssentialAppsNames.toArray(new CharSequence[0]));
         mMultiSelectListPreference.setEntryValues(mEssentialApps.toArray(new CharSequence[0]));
-
     }
 
     @Override
-    public void onViewCreated (View view, Bundle savedInstanceState) {
+    public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphNotifsEnabled(),
                 SettingsManager.getGlyphNotifsAnimation(), 1500);
@@ -132,7 +133,7 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
 
         if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS)) {
             mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphNotifsEnabled(),
-                newValue.toString(), 1500);
+                    newValue.toString(), 1500);
         }
 
         if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ESSENTIAL)) {
