@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,6 +37,7 @@ public final class Constants {
     public static final String GLYPH_ENABLE = "glyph_enable";
     public static final String GLYPH_FLIP_ENABLE = "glyph_settings_flip_toggle";
     public static final String GLYPH_BRIGHTNESS = "glyph_settings_brightness";
+    public static final String GLYPH_HAPTIC_ENABLE = "glyph_settings_haptic_toggle";
     public static final String GLYPH_CHARGING_CATEGORY = "glyph_settings_charging";
     public static final String GLYPH_CHARGING_LEVEL_ENABLE = "glyph_settings_charging_level";
     public static final String GLYPH_CHARGING_POWERSHARE_ENABLE = "glyph_settings_charging_powershare";
@@ -63,7 +64,6 @@ public final class Constants {
     public static final String[] APPS_TO_IGNORE = {
         "android",
         "com.android.traceur",
-        //"com.google.android.dialer",
         "com.google.android.setupwizard",
         "dev.kdrag0n.dyntheme.privileged.sys"
     };
@@ -115,5 +115,4 @@ public final class Constants {
 
         return supportedAnimationPatternLengths;
     }
-
 }

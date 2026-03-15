@@ -16,6 +16,7 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
+
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:title="@string/glyph_settings_title">
@@ -37,35 +38,39 @@
 
     <PreferenceCategory
         android:key="glyph_settings_call"
-        android:title="@string/glyph_settings_call_title" />
+        android:title="@string/glyph_settings_call_title">
 
         <com.android.settingslib.PrimarySwitchPreference
             android:key="glyph_settings_call_toggle"
             android:defaultValue="true"
             android:title="@string/glyph_settings_call_toggle_title"
-            android:summary="@string/glyph_settings_call_toggle_summary" >
+            android:summary="@string/glyph_settings_call_toggle_summary">
             <intent android:action="android.intent.action.MAIN"
-                 android:targetPackage="co.aospa.glyph"
-                 android:targetClass="co.aospa.glyph.Settings.CallSettingsActivity"/>
+                android:targetPackage="co.aospa.glyph"
+                android:targetClass="co.aospa.glyph.Settings.CallSettingsActivity"/>
         </com.android.settingslib.PrimarySwitchPreference>
+
+    </PreferenceCategory>
 
     <PreferenceCategory
         android:key="glyph_settings_notifs"
-        android:title="@string/glyph_settings_notifs_title" />
+        android:title="@string/glyph_settings_notifs_title">
 
         <com.android.settingslib.PrimarySwitchPreference
             android:key="glyph_settings_notifs_toggle"
             android:defaultValue="true"
             android:title="@string/glyph_settings_notifs_toggle_title"
-            android:summary="@string/glyph_settings_notifs_toggle_summary" >
+            android:summary="@string/glyph_settings_notifs_toggle_summary">
             <intent android:action="android.intent.action.MAIN"
-                 android:targetPackage="co.aospa.glyph"
-                 android:targetClass="co.aospa.glyph.Settings.NotifsSettingsActivity"/>
+                android:targetPackage="co.aospa.glyph"
+                android:targetClass="co.aospa.glyph.Settings.NotifsSettingsActivity"/>
         </com.android.settingslib.PrimarySwitchPreference>
+
+    </PreferenceCategory>
 
     <PreferenceCategory
         android:key="glyph_settings_charging"
-        android:title="@string/glyph_settings_charging_title" />
+        android:title="@string/glyph_settings_charging_title">
 
         <SwitchPreferenceCompat
             android:key="glyph_settings_charging_level"
@@ -79,9 +84,11 @@
             android:title="@string/glyph_settings_charging_powershare_title"
             android:summary="@string/glyph_settings_charging_powershare_summary" />
 
+    </PreferenceCategory>
+
     <PreferenceCategory
         android:key="glyph_settings_volume"
-        android:title="@string/glyph_settings_volume_title" />
+        android:title="@string/glyph_settings_volume_title">
 
         <SwitchPreferenceCompat
             android:key="glyph_settings_volume_level_toggle"
@@ -89,9 +96,11 @@
             android:title="@string/glyph_settings_volume_level_toggle_title"
             android:summary="@string/glyph_settings_volume_level_toggle_summary" />
 
+    </PreferenceCategory>
+
     <PreferenceCategory
         android:key="glyph_settings_gesture"
-        android:title="@string/glyph_settings_gesture_title" />
+        android:title="@string/glyph_settings_gesture_title">
 
         <SwitchPreferenceCompat
             android:key="glyph_settings_shake_torch_toggle"
@@ -108,14 +117,30 @@
             android:defaultValue="40"
             android:dependency="glyph_settings_shake_torch_toggle" />
 
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="glyph_settings_haptic_toggle"
+        android:title="@string/glyph_settings_haptic_title">
+
+        <SwitchPreferenceCompat
+            android:key="glyph_settings_haptic_toggle"
+            android:defaultValue="false"
+            android:title="@string/glyph_settings_haptic_toggle_title"
+            android:summary="@string/glyph_settings_haptic_toggle_summary" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory
         android:key="glyph_settings_misc"
-        android:title="@string/glyph_settings_misc_title" />
+        android:title="@string/glyph_settings_misc_title">
 
         <SwitchPreferenceCompat
             android:key="glyph_settings_music_visualizer_toggle"
             android:defaultValue="false"
             android:title="@string/glyph_settings_music_visualizer_toggle_title"
             android:summary="@string/glyph_settings_music_visualizer_toggle_summary" />
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

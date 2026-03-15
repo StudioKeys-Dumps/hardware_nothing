@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,10 @@
 
 package co.aospa.glyph.Manager;
 
+import android.content.Context;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 
 import com.android.internal.util.ArrayUtils;
@@ -29,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import co.aospa.glyph.Constants.Constants;
+import co.aospa.glyph.GlyphApplication;
 import co.aospa.glyph.Utils.FileUtils;
 import co.aospa.glyph.Utils.ResourceUtils;
 
@@ -37,9 +41,36 @@ public final class AnimationManager {
     private static final String TAG = "GlyphAnimationManager";
     private static final boolean DEBUG = true;
 
+    private static Vibrator mVibrator;
+    private static boolean vibratedThisCycle = false;
+
     private static Future<?> submit(Runnable runnable) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         return executorService.submit(runnable);
+    }
+
+    private static void initVibrator() {
+        if (mVibrator == null) {
+            Context context = GlyphApplication.getContext();
+            if (context != null) {
+                mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            }
+        }
+    }
+
+    private static void playHaptic(float brightness) {
+        initVibrator();
+        if (mVibrator == null || !mVibrator.hasVibrator()) return;
+
+        if (!SettingsManager.isHapticEnabled()) return;
+
+        if (brightness > 0 && !vibratedThisCycle) {
+            int amplitude = (int) Math.max(1, Math.min(brightness * 255 / Constants.getMaxBrightness(), 255));
+            mVibrator.vibrate(VibrationEffect.createOneShot(20, amplitude));
+            vibratedThisCycle = true;
+        } else if (brightness <= 0) {
+            vibratedThisCycle = false;
+        }
     }
 
     private static boolean check(String name, boolean wait) {
@@ -363,7 +394,7 @@ public final class AnimationManager {
                 if (DEBUG) Log.d(TAG, "Done playing animation | name: essential");
             });
         } else {
-            updateLedSingle(led, Constants.getMaxBrightness() / 100 * 7);
+            updateLedSingle(led, (float) Constants.getMaxBrightness() / 100 * 7);
             return;
         }
 
@@ -431,7 +462,12 @@ public final class AnimationManager {
     }
 
     private static void updateLedFrame(float[] pattern) {
-        //if (DEBUG) Log.d(TAG, "Updating pattern: " + pattern);
+        float maxFrameBrightness = 0;
+        for (float b : pattern) {
+            if (b > maxFrameBrightness) maxFrameBrightness = b;
+        }
+        playHaptic(maxFrameBrightness);
+
         float maxBrightness = (float) Constants.getMaxBrightness();
         int essentialLed = ResourceUtils.getInteger("glyph_settings_notifs_essential_led");
         if (StatusManager.isEssentialLedActive()) {
@@ -456,7 +492,7 @@ public final class AnimationManager {
     }
 
     private static void updateLedSingle(int led, float brightness) {
-        //if (DEBUG) Log.d(TAG, "Updating led | led: " + led + " | brightness: " + brightness);
+        playHaptic(brightness);
         float maxBrightness = (float) Constants.getMaxBrightness();
         int essentialLed = ResourceUtils.getInteger("glyph_settings_notifs_essential_led");
         if (StatusManager.isEssentialLedActive()

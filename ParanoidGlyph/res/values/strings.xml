@@ -81,4 +81,9 @@
     <string name="glyph_settings_shake_sensitivity_title">Shake sensitivity</string>
     <string name="glyph_settings_shake_sensitivity_summary">Adjust how hard you need to shake (lower = more sensitive)</string>
 
+    <!-- Haptic -->
+    <string name="glyph_settings_haptic_title">Vibration</string>
+    <string name="glyph_settings_haptic_toggle_title">Glyph Vibration</string>
+    <string name="glyph_settings_haptic_toggle_summary">Vibrate in sync with the Glyph lights</string>
+
 </resources>
