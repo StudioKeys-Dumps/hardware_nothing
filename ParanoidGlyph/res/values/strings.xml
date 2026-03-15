@@ -42,7 +42,7 @@
 
     <string name="glyph_settings_call_title">Calls</string>
     <string name="glyph_settings_call_toggle_title">Call animation</string>
-    <string name="glyph_settings_call_toggle_summary">Flash LEDs on incoming calls</string>
+    <string name="glyph_settings_call_toggle_summary">Enable Glyph lights when receiving calls</string>
     <string name="glyph_settings_call_sounds_title">Call sounds</string>
     <string name="glyph_settings_call_sub_animations_title">Pattern</string>
     <string name="glyph_settings_call_sub_custom_ringtone_title">Add ringtone</string>
@@ -50,7 +50,7 @@
 
     <string name="glyph_settings_notifs_title">Notifications</string>
     <string name="glyph_settings_notifs_toggle_title">Notification animation</string>
-    <string name="glyph_settings_notifs_toggle_summary">Flash LEDs on new notifications</string>
+    <string name="glyph_settings_notifs_toggle_summary">Enable Glyph lights when receiving notifications</string>
     <string name="glyph_settings_notifs_sub_title">Apps to allow</string>
     <string name="glyph_settings_notifs_sounds_title">Notification sounds</string>
     <string name="glyph_settings_notifs_sub_animations_title">Pattern</string>
