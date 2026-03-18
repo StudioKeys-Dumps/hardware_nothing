@@ -22,4 +22,15 @@
     <integer-array name="glyph_settings_empty_array_integer" translatable="false">
     </integer-array>
 
+    <!-- Schedule -->
+    <string-array name="glyph_schedule_mode_entries">
+        <item>Never</item>
+        <item>At scheduled times</item>
+    </string-array>
+ 
+    <string-array name="glyph_schedule_mode_values">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+
 </resources>

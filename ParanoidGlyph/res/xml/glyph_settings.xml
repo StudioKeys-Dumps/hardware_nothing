@@ -132,6 +132,28 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="glyph_settings_schedule"
+        android:title="@string/glyph_settings_schedule_title">
+
+        <ListPreference
+            android:key="glyph_settings_schedule_mode"
+            android:title="@string/glyph_settings_schedule_mode_title"
+            android:summary="%s"
+            android:persistent="false"
+            android:entries="@array/glyph_schedule_mode_entries"
+            android:entryValues="@array/glyph_schedule_mode_values" />
+
+        <Preference
+            android:key="glyph_settings_schedule_start"
+            android:title="@string/glyph_settings_schedule_start_title" />
+
+        <Preference
+            android:key="glyph_settings_schedule_end"
+            android:title="@string/glyph_settings_schedule_end_title" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:key="glyph_settings_misc"
         android:title="@string/glyph_settings_misc_title">
 

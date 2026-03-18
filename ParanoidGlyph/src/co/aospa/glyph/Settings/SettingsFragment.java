@@ -18,12 +18,19 @@
 
 package co.aospa.glyph.Settings;
 
+import android.app.TimePickerDialog;
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+import android.widget.TimePicker;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.SwitchPreferenceCompat;
@@ -52,6 +59,11 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private SliderPreference mShakeSensitivityPreference;
     private SwitchPreferenceCompat mHapticPreference;
     private SwitchPreferenceCompat mMusicVisualizerPreference;
+    private ListPreference mScheduleModePreference;
+    private Preference mScheduleStartPreference;
+    private Preference mScheduleEndPreference;
+
+    private BroadcastReceiver mScheduleStateReceiver;
 
     private ContentResolver mContentResolver;
     private SettingObserver mSettingObserver;
@@ -123,13 +135,69 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mHapticPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_HAPTIC_ENABLE);
         mHapticPreference.setOnPreferenceChangeListener(this);
 
+        mScheduleModePreference = (ListPreference) findPreference(Constants.GLYPH_SCHEDULE_MODE);
+        mScheduleModePreference.setValueIndex(SettingsManager.getGlyphScheduleMode());
+        mScheduleModePreference.setOnPreferenceChangeListener(this);
+
+        mScheduleStartPreference = findPreference(Constants.GLYPH_SCHEDULE_START);
+        mScheduleStartPreference.setOnPreferenceClickListener(p -> {
+            int hour   = SettingsManager.getGlyphScheduleStartHour();
+            int minute = SettingsManager.getGlyphScheduleStartMinute();
+            new TimePickerDialog(getContext(), (view, h, m) -> {
+                SettingsManager.setGlyphScheduleStart(h, m);
+                updateScheduleSummaries();
+                mHandler.post(() -> ServiceUtils.checkGlyphService());
+            }, hour, minute, true).show();
+            return true;
+        });
+
+        mScheduleEndPreference = findPreference(Constants.GLYPH_SCHEDULE_END);
+        mScheduleEndPreference.setOnPreferenceClickListener(p -> {
+            int hour   = SettingsManager.getGlyphScheduleEndHour();
+            int minute = SettingsManager.getGlyphScheduleEndMinute();
+            new TimePickerDialog(getContext(), (view, h, m) -> {
+                SettingsManager.setGlyphScheduleEnd(h, m);
+                updateScheduleSummaries();
+                mHandler.post(() -> ServiceUtils.checkGlyphService());
+            }, hour, minute, true).show();
+            return true;
+        });
+
+        updateScheduleSummaries();
+
         updateDependencies(glyphEnabled, mMusicVisualizerPreference.isChecked());
 
         mHandler.post(() -> ServiceUtils.checkGlyphService());
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        mScheduleStateReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, Intent intent) {
+                mHandler.post(() -> updateDependencies(SettingsManager.isGlyphEnabled(),
+                        mMusicVisualizerPreference.isChecked()));
+            }
+        };
+        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
+                mScheduleStateReceiver,
+                new IntentFilter("co.aospa.glyph.SCHEDULE_STATE_CHANGED"));
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mScheduleStateReceiver != null) {
+            LocalBroadcastManager.getInstance(requireContext())
+                    .unregisterReceiver(mScheduleStateReceiver);
+            mScheduleStateReceiver = null;
+        }
+    }
+
     private void updateDependencies(boolean glyphEnabled, boolean musicEnabled) {
-        boolean canEnableSubFeatures = glyphEnabled && !musicEnabled;
+        boolean quietHours = SettingsManager.isWithinScheduledOffWindow();
+        boolean canEnableSubFeatures = glyphEnabled && !musicEnabled && !quietHours;
 
         mFlipPreference.setEnabled(canEnableSubFeatures);
         mBrightnessPreference.setEnabled(canEnableSubFeatures);
@@ -144,6 +212,11 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mShakeTorchPreference.setEnabled(canEnableSubFeatures);
         mShakeSensitivityPreference.setEnabled(canEnableSubFeatures && mShakeTorchPreference.isChecked());
         mHapticPreference.setEnabled(canEnableSubFeatures);
+
+        boolean scheduleCustom = SettingsManager.getGlyphScheduleMode() == 1;
+        mScheduleModePreference.setEnabled(canEnableSubFeatures);
+        mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
+        mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
     }
 
     @Override
@@ -197,8 +270,29 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
             return true;
         }
 
+        if (preferenceKey.equals(Constants.GLYPH_SCHEDULE_MODE)) {
+            int mode = Integer.parseInt((String) newValue);
+            SettingsManager.setGlyphScheduleMode(mode);
+            updateDependencies(isGlyphEnabled, isMusicEnabled);
+            mHandler.post(() -> ServiceUtils.checkGlyphService());
+            return true;
+        }
+
         mHandler.post(() -> ServiceUtils.checkGlyphService());
         return true;
+    }
+
+    private void updateScheduleSummaries() {
+        mScheduleStartPreference.setSummary(formatTime(
+                SettingsManager.getGlyphScheduleStartHour(),
+                SettingsManager.getGlyphScheduleStartMinute()));
+        mScheduleEndPreference.setSummary(formatTime(
+                SettingsManager.getGlyphScheduleEndHour(),
+                SettingsManager.getGlyphScheduleEndMinute()));
+    }
+
+    private String formatTime(int hour, int minute) {
+        return String.format("%02d:%02d", hour, minute);
     }
 
     @Override

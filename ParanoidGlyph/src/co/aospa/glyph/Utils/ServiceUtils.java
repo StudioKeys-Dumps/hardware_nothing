@@ -28,6 +28,7 @@ import co.aospa.glyph.Manager.SettingsManager;
 import co.aospa.glyph.Services.CallReceiverService;
 import co.aospa.glyph.Services.ChargingService;
 import co.aospa.glyph.Services.FlipToGlyphService;
+import co.aospa.glyph.Services.GlyphScheduleService;
 import co.aospa.glyph.Services.MusicVisualizerService;
 import co.aospa.glyph.Services.PowershareService;
 import co.aospa.glyph.Services.ThirdPartyService;
@@ -137,11 +138,59 @@ public final class ServiceUtils {
                 UserHandle.CURRENT);
     }
 
+    public static void startGlyphScheduleService() {
+        if (DEBUG) Log.d(TAG, "Starting Glyph Schedule service");
+        context.startServiceAsUser(new Intent(context, GlyphScheduleService.class),
+                UserHandle.CURRENT);
+    }
+
+    public static void stopGlyphScheduleService() {
+        if (DEBUG) Log.d(TAG, "Stopping Glyph Schedule service");
+        context.stopServiceAsUser(new Intent(context, GlyphScheduleService.class),
+                UserHandle.CURRENT);
+    }
+
+    public static void startOtherServices() {
+        if (DEBUG) Log.d(TAG, "startOtherServices");
+        Constants.setBrightness(SettingsManager.getGlyphBrightness());
+        startThirdPartyService();
+        startCameraRecordingService();
+        if (SettingsManager.isGlyphChargingEnabled()) startChargingService();
+        else stopChargingService();
+        if (SettingsManager.isGlyphPowershareEnabled()) startPowershareService();
+        else stopPowershareService();
+        if (SettingsManager.isGlyphCallEnabled()) startCallReceiverService();
+        else stopCallReceiverService();
+        if (SettingsManager.isGlyphFlipEnabled()) startFlipToGlyphService();
+        else stopFlipToGlyphService();
+        if (SettingsManager.isGlyphMusicVisualizerEnabled()) startMusicVisualizerService();
+        else stopMusicVisualizerService();
+        if (SettingsManager.isGlyphVolumeLevelEnabled()) startVolumeLevelService();
+        else stopVolumeLevelService();
+    }
+
+    public static void stopOtherServices() {
+        if (DEBUG) Log.d(TAG, "stopOtherServices");
+        stopChargingService();
+        stopPowershareService();
+        stopCallReceiverService();
+        stopFlipToGlyphService();
+        stopMusicVisualizerService();
+        stopVolumeLevelService();
+        stopThirdPartyService();
+        stopCameraRecordingService();
+    }
+
     public static void checkGlyphService() {
         if (SettingsManager.isGlyphEnabled()) {
             Constants.setBrightness(SettingsManager.getGlyphBrightness());
             startThirdPartyService();
             startCameraRecordingService();
+            if (SettingsManager.isGlyphScheduleEnabled()) {
+                startGlyphScheduleService();
+            } else {
+                stopGlyphScheduleService();
+            }
             if (SettingsManager.isGlyphChargingEnabled()) {
                 startChargingService();
             } else {
@@ -181,6 +230,7 @@ public final class ServiceUtils {
             stopVolumeLevelService();
             stopThirdPartyService();
             stopCameraRecordingService();
+            stopGlyphScheduleService();
         }
     }
 }

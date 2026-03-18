@@ -164,4 +164,74 @@ public final class SettingsManager {
         return PreferenceManager.getDefaultSharedPreferences(context)
                 .getBoolean(Constants.GLYPH_HAPTIC_ENABLE, false) && isGlyphEnabled();
     }
+
+    public static int getGlyphScheduleMode() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_SCHEDULE_MODE, 0);
+    }
+
+    public static void setGlyphScheduleMode(int mode) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putInt(Constants.GLYPH_SCHEDULE_MODE, mode)
+                .apply();
+    }
+
+    public static int getGlyphScheduleStartHour() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_SCHEDULE_START_HOUR, 22);
+    }
+
+    public static int getGlyphScheduleStartMinute() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_SCHEDULE_START_MINUTE, 0);
+    }
+
+    public static void setGlyphScheduleStart(int hour, int minute) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putInt(Constants.GLYPH_SCHEDULE_START_HOUR, hour)
+                .putInt(Constants.GLYPH_SCHEDULE_START_MINUTE, minute)
+                .apply();
+    }
+
+    public static int getGlyphScheduleEndHour() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_SCHEDULE_END_HOUR, 7);
+    }
+
+    public static int getGlyphScheduleEndMinute() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_SCHEDULE_END_MINUTE, 0);
+    }
+
+    public static void setGlyphScheduleEnd(int hour, int minute) {
+        PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putInt(Constants.GLYPH_SCHEDULE_END_HOUR, hour)
+                .putInt(Constants.GLYPH_SCHEDULE_END_MINUTE, minute)
+                .apply();
+    }
+
+    public static boolean isGlyphScheduleEnabled() {
+        return getGlyphScheduleMode() == 1 && isGlyphEnabled();
+    }
+
+    public static boolean isWithinScheduledOffWindow() {
+        if (!isGlyphScheduleEnabled()) return false;
+
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        int nowMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60
+                + now.get(java.util.Calendar.MINUTE);
+
+        int startMinutes = getGlyphScheduleStartHour() * 60 + getGlyphScheduleStartMinute();
+        int endMinutes   = getGlyphScheduleEndHour()   * 60 + getGlyphScheduleEndMinute();
+
+        if (startMinutes == endMinutes) return false;
+
+        if (startMinutes > endMinutes) {
+            return nowMinutes >= startMinutes || nowMinutes < endMinutes;
+        }
+        return nowMinutes >= startMinutes && nowMinutes < endMinutes;
+    }
 }

@@ -21,18 +21,19 @@
     android:versionCode="1"
     android:versionName="1.0"
     android:sharedUserId="android.uid.system">
-
+ 
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WATCH_APPOPS" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+ 
     <uses-sdk
         android:minSdkVersion="31"
         android:targetSdkVersion="31"/>
-
+ 
     <application
         android:name=".GlyphApplication"
         android:label="@string/glyph_settings_app_name"
@@ -41,7 +42,7 @@
         android:enableOnBackInvokedCallback="true"
         android:directBootAware="true"
         android:theme="@style/Theme.SubSettingsBase.Expressive">
-
+ 
         <receiver
             android:name=".BootCompletedReceiver"
             android:exported="true"
@@ -51,40 +52,44 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
+ 
         <service
             android:name=".Services.CallReceiverService"
             android:permission="android.permission.READ_PHONE_STATE">
         </service>
-
+ 
         <service
             android:name=".Services.ChargingService">
         </service>
-
+ 
         <service
             android:name=".Services.PowershareService">
         </service>
-
+ 
         <service
             android:name=".Services.FlipToGlyphService">
         </service>
-
+ 
         <service
             android:name=".Services.MusicVisualizerService">
         </service>
-
+ 
+        <service
+            android:name=".Services.GlyphScheduleService">
+        </service>
+ 
         <service
             android:name=".Services.VolumeLevelService">
         </service>
-
+ 
         <service
             android:name=".Services.CameraRecordingService">
         </service>
-
+ 
         <service
             android:name=".Services.ShakeDetectorService">
         </service>
-
+ 
         <service
             android:name=".Services.NotificationService"
             android:exported="false"
@@ -93,7 +98,7 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
-
+ 
         <service
             android:name=".Tiles.GlyphTileService"
             android:exported="true"
@@ -130,7 +135,7 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
-
+ 
         <activity
             android:name=".Settings.SettingsActivity"
             android:configChanges="orientation|screenSize"
@@ -158,7 +163,7 @@
 		android:name="com.android.settings.icon_color_scheme"
 		android:value="blue" />
         </activity>
-
+ 
         <activity
             android:name=".Settings.CallSettingsActivity"
             android:configChanges="orientation|screenSize"
@@ -167,7 +172,7 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-
+ 
         <activity
             android:name=".Settings.NotifsSettingsActivity"
             android:configChanges="orientation|screenSize"
@@ -176,6 +181,6 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-
+ 
     </application>
 </manifest>
