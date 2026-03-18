@@ -120,7 +120,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        android:key="glyph_settings_haptic_toggle"
+        android:key="glyph_settings_haptic_category"
         android:title="@string/glyph_settings_haptic_title">
 
         <SwitchPreferenceCompat

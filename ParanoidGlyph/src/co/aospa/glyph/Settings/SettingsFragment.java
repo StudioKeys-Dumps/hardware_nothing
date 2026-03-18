@@ -50,6 +50,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private SwitchPreferenceCompat mVolumeLevelPreference;
     private SwitchPreferenceCompat mShakeTorchPreference;
     private SliderPreference mShakeSensitivityPreference;
+    private SwitchPreferenceCompat mHapticPreference;
     private SwitchPreferenceCompat mMusicVisualizerPreference;
 
     private ContentResolver mContentResolver;
@@ -119,6 +120,9 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mMusicVisualizerPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_MUSIC_VISUALIZER_ENABLE);
         mMusicVisualizerPreference.setOnPreferenceChangeListener(this);
 
+        mHapticPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_HAPTIC_ENABLE);
+        mHapticPreference.setOnPreferenceChangeListener(this);
+
         updateDependencies(glyphEnabled, mMusicVisualizerPreference.isChecked());
 
         mHandler.post(() -> ServiceUtils.checkGlyphService());
@@ -128,7 +132,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         boolean canEnableSubFeatures = glyphEnabled && !musicEnabled;
 
         mFlipPreference.setEnabled(canEnableSubFeatures);
-        mBrightnessPreference.setEnabled(glyphEnabled);
+        mBrightnessPreference.setEnabled(canEnableSubFeatures);
         mNotifsPreference.setEnabled(canEnableSubFeatures);
         mNotifsPreference.setSwitchEnabled(canEnableSubFeatures);
         mCallPreference.setEnabled(canEnableSubFeatures);
@@ -139,6 +143,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mMusicVisualizerPreference.setEnabled(glyphEnabled);
         mShakeTorchPreference.setEnabled(canEnableSubFeatures);
         mShakeSensitivityPreference.setEnabled(canEnableSubFeatures && mShakeTorchPreference.isChecked());
+        mHapticPreference.setEnabled(canEnableSubFeatures);
     }
 
     @Override

@@ -436,12 +436,12 @@ public final class AnimationManager {
             }
 
             try {
-                updateLedFrame(pattern);
+                updateLedFrame(pattern, true);
                 Thread.sleep(90);
             } catch (Exception e) {
                 if (DEBUG) Log.d(TAG, "Exception while playing animation | name: music: " + name + " | exception: " + e);
             } finally {
-                updateLedFrame(new float[5]);
+                updateLedFrame(new float[5], true);
                 if (DEBUG) Log.d(TAG, "Done playing animation | name: " + name);
             }
         });
@@ -462,11 +462,15 @@ public final class AnimationManager {
     }
 
     private static void updateLedFrame(float[] pattern) {
+        updateLedFrame(pattern, false);
+    }
+
+    private static void updateLedFrame(float[] pattern, boolean skipHaptic) {
         float maxFrameBrightness = 0;
         for (float b : pattern) {
             if (b > maxFrameBrightness) maxFrameBrightness = b;
         }
-        playHaptic(maxFrameBrightness);
+        if (!skipHaptic) playHaptic(maxFrameBrightness);
 
         float maxBrightness = (float) Constants.getMaxBrightness();
         int essentialLed = ResourceUtils.getInteger("glyph_settings_notifs_essential_led");
