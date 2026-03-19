@@ -27,7 +27,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.View;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -103,22 +102,6 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
         if (Constants.GLYPH_CALL_CUSTOM_VALUE.equals(mListPreference.getValue())) {
             mListPreference.setSummary(getString(R.string.glyph_settings_call_sub_custom_ringtone_set));
         }
-    }
-
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        mHandler.postDelayed(() -> {
-            String current = mListPreference.getValue();
-            if (Constants.GLYPH_CALL_CUSTOM_VALUE.equals(current)) {
-                String uriString = SettingsManager.getGlyphCallCustomRingtoneUri();
-                if (uriString != null && !uriString.isEmpty()) {
-                    playCustomAudioOnly(Uri.parse(uriString));
-                }
-            } else {
-                playPreviewSynced(current, "ringtones");
-            }
-        }, 300);
     }
 
     @Override
