@@ -31,6 +31,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.util.Calendar;
 
 import co.aospa.glyph.Manager.SettingsManager;
+import co.aospa.glyph.Manager.StatusManager;
 import co.aospa.glyph.Utils.ServiceUtils;
 
 public class GlyphScheduleService extends Service {
@@ -69,6 +70,7 @@ public class GlyphScheduleService extends Service {
     @Override
     public void onCreate() {
         if (DEBUG) Log.d(TAG, "Creating GlyphScheduleService");
+        StatusManager.setScheduleServiceActive(true);
         mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         IntentFilter filter = new IntentFilter();
@@ -83,12 +85,14 @@ public class GlyphScheduleService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (DEBUG) Log.d(TAG, "Starting GlyphScheduleService");
+        scheduleNextAlarms();
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         if (DEBUG) Log.d(TAG, "Destroying GlyphScheduleService");
+        StatusManager.setScheduleServiceActive(false);
         cancelAlarms();
         unregisterReceiver(mScheduleReceiver);
         super.onDestroy();

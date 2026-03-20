@@ -31,6 +31,16 @@ public final class StatusManager {
 
     private static boolean callLedEnabled = false;
 
+    private static boolean scheduleServiceActive = false;
+
+    public static boolean isScheduleServiceActive() {
+        return scheduleServiceActive;
+    }
+
+    public static void setScheduleServiceActive(boolean status) {
+        scheduleServiceActive = status;
+    }
+
     public static boolean isAnimationActive() {
         return animationActive;
     }

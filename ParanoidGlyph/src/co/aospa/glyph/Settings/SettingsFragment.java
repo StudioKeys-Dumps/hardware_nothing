@@ -168,31 +168,29 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         updateDependencies(glyphEnabled, mMusicVisualizerPreference.isChecked());
 
         mHandler.post(() -> ServiceUtils.checkGlyphService());
-    }
 
-    @Override
-    public void onResume() {
-        super.onResume();
         mScheduleStateReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(android.content.Context context, Intent intent) {
+                android.util.Log.d("GlyphSettingsFragment", "SCHEDULE_STATE_CHANGED received");
                 mHandler.post(() -> updateDependencies(SettingsManager.isGlyphEnabled(),
                         mMusicVisualizerPreference.isChecked()));
             }
         };
-        LocalBroadcastManager.getInstance(requireContext()).registerReceiver(
+        android.util.Log.d("GlyphSettingsFragment", "Registering SCHEDULE_STATE_CHANGED receiver");
+        LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(
                 mScheduleStateReceiver,
                 new IntentFilter("co.aospa.glyph.SCHEDULE_STATE_CHANGED"));
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
-        if (mScheduleStateReceiver != null) {
-            LocalBroadcastManager.getInstance(requireContext())
-                    .unregisterReceiver(mScheduleStateReceiver);
-            mScheduleStateReceiver = null;
-        }
     }
 
     private void updateDependencies(boolean glyphEnabled, boolean musicEnabled) {
@@ -298,6 +296,11 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     @Override
     public void onDestroy() {
         mSettingObserver.unregister(mContentResolver);
+        if (mScheduleStateReceiver != null) {
+            LocalBroadcastManager.getInstance(getActivity().getApplicationContext())
+                    .unregisterReceiver(mScheduleStateReceiver);
+            mScheduleStateReceiver = null;
+        }
         super.onDestroy();
     }
 

@@ -25,6 +25,7 @@ import android.util.Log;
 
 import co.aospa.glyph.Constants.Constants;
 import co.aospa.glyph.Manager.SettingsManager;
+import co.aospa.glyph.Manager.StatusManager;
 import co.aospa.glyph.Services.CallReceiverService;
 import co.aospa.glyph.Services.ChargingService;
 import co.aospa.glyph.Services.FlipToGlyphService;
@@ -146,6 +147,7 @@ public final class ServiceUtils {
 
     public static void stopGlyphScheduleService() {
         if (DEBUG) Log.d(TAG, "Stopping Glyph Schedule service");
+        StatusManager.setScheduleServiceActive(false);
         context.stopServiceAsUser(new Intent(context, GlyphScheduleService.class),
                 UserHandle.CURRENT);
     }
@@ -190,6 +192,10 @@ public final class ServiceUtils {
                 startGlyphScheduleService();
             } else {
                 stopGlyphScheduleService();
+            }
+            if (SettingsManager.isWithinScheduledOffWindow()) {
+                if (DEBUG) Log.d(TAG, "checkGlyphService: within scheduled off window, skipping");
+                return;
             }
             if (SettingsManager.isGlyphChargingEnabled()) {
                 startChargingService();
