@@ -18,6 +18,8 @@ package co.aospa.glyph.Services;
 
 import android.app.Service;
 import android.content.Intent;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
@@ -38,9 +40,10 @@ public class ThermalMonitorService extends Service {
 
     private static final String DOT_LED_PATH = "/sys/class/leds/aw210xx_led/dot_led_br";
 
+    private static final String ALERT_SOUND_PATH = "/product/media/audio/ui/Alert.ogg";
+
     private Handler mHandler;
     private Runnable mPollingRunnable;
-
     private boolean mCpuAlertActive = false;
 
     @Override
@@ -113,10 +116,24 @@ public class ThermalMonitorService extends Service {
 
     private void activateAlert() {
         FileUtils.writeLine(DOT_LED_PATH, Constants.getBrightness());
+        playAlertSound();
     }
 
     private void clearAlert() {
         mCpuAlertActive = false;
         FileUtils.writeLine(DOT_LED_PATH, 0);
+    }
+
+    private void playAlertSound() {
+        try {
+            MediaPlayer mediaPlayer = new MediaPlayer();
+            mediaPlayer.setDataSource(ALERT_SOUND_PATH);
+            mediaPlayer.prepare();
+            mediaPlayer.setOnCompletionListener(MediaPlayer::release);
+            mediaPlayer.start();
+            if (DEBUG) Log.d(TAG, "Playing alert sound");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to play alert sound", e);
+        }
     }
 }
