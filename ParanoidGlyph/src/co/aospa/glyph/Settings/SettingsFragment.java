@@ -96,7 +96,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mBrightnessPreference.setSliderIncrement(1);
         mBrightnessPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
         mBrightnessPreference.setValue(SettingsManager.getGlyphBrightnessSetting());
-        mBrightnessPreference.setTickVisible(true);
+        mBrightnessPreference.setTickVisible(false);
         mBrightnessPreference.setUpdatesContinuously(true);
         mBrightnessPreference.setOnPreferenceChangeListener(this);
 
@@ -126,7 +126,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
             mShakeSensitivityPreference.setMax(60);
             mShakeSensitivityPreference.setSliderIncrement(5);
             mShakeSensitivityPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
-            mShakeSensitivityPreference.setTickVisible(true);
+            mShakeSensitivityPreference.setTickVisible(false);
             mShakeSensitivityPreference.setUpdatesContinuously(true);
             mShakeSensitivityPreference.setOnPreferenceChangeListener(this);
         }
