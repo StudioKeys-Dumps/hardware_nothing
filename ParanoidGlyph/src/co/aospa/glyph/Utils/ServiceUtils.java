@@ -34,6 +34,7 @@ import co.aospa.glyph.Services.MusicVisualizerService;
 import co.aospa.glyph.Services.PowershareService;
 import co.aospa.glyph.Services.ThirdPartyService;
 import co.aospa.glyph.Services.CameraRecordingService;
+import co.aospa.glyph.Services.ThermalMonitorService;
 import co.aospa.glyph.Services.VolumeLevelService;
 
 public final class ServiceUtils {
@@ -139,6 +140,18 @@ public final class ServiceUtils {
                 UserHandle.CURRENT);
     }
 
+    public static void startThermalMonitorService() {
+        if (DEBUG) Log.d(TAG, "Starting Thermal Monitor service");
+        context.startServiceAsUser(new Intent(context, ThermalMonitorService.class),
+                UserHandle.CURRENT);
+    }
+
+    public static void stopThermalMonitorService() {
+        if (DEBUG) Log.d(TAG, "Stopping Thermal Monitor service");
+        context.stopServiceAsUser(new Intent(context, ThermalMonitorService.class),
+                UserHandle.CURRENT);
+    }
+
     public static void startGlyphScheduleService() {
         if (DEBUG) Log.d(TAG, "Starting Glyph Schedule service");
         context.startServiceAsUser(new Intent(context, GlyphScheduleService.class),
@@ -169,6 +182,9 @@ public final class ServiceUtils {
         else stopMusicVisualizerService();
         if (SettingsManager.isGlyphVolumeLevelEnabled()) startVolumeLevelService();
         else stopVolumeLevelService();
+        if (SettingsManager.isGlyphThermalCpuEnabled())
+            startThermalMonitorService();
+        else stopThermalMonitorService();
     }
 
     public static void stopOtherServices() {
@@ -181,6 +197,7 @@ public final class ServiceUtils {
         stopVolumeLevelService();
         stopThirdPartyService();
         stopCameraRecordingService();
+        stopThermalMonitorService();
     }
 
     public static void checkGlyphService() {
@@ -227,6 +244,11 @@ public final class ServiceUtils {
             } else {
                 stopVolumeLevelService();
             }
+            if (SettingsManager.isGlyphThermalCpuEnabled()) {
+                startThermalMonitorService();
+            } else {
+                stopThermalMonitorService();
+            }
         } else {
             stopChargingService();
             stopPowershareService();
@@ -236,6 +258,7 @@ public final class ServiceUtils {
             stopVolumeLevelService();
             stopThirdPartyService();
             stopCameraRecordingService();
+            stopThermalMonitorService();
             stopGlyphScheduleService();
         }
     }

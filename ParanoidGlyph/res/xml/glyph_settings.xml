@@ -154,6 +154,24 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="glyph_settings_thermal"
+        android:title="@string/glyph_settings_thermal_title">
+
+        <SwitchPreferenceCompat
+            android:key="glyph_settings_thermal_cpu_enable"
+            android:defaultValue="false"
+            android:title="@string/glyph_settings_thermal_cpu_enable_title"
+            android:summary="@string/glyph_settings_thermal_cpu_enable_summary" />
+
+        <com.android.settingslib.widget.SliderPreference
+            android:key="glyph_settings_thermal_cpu_threshold"
+            android:title="@string/glyph_settings_thermal_cpu_threshold_title"
+            android:defaultValue="80"
+            android:dependency="glyph_settings_thermal_cpu_enable" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:key="glyph_settings_misc"
         android:title="@string/glyph_settings_misc_title">
 

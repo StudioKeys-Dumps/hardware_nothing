@@ -62,6 +62,8 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private ListPreference mScheduleModePreference;
     private Preference mScheduleStartPreference;
     private Preference mScheduleEndPreference;
+    private SwitchPreferenceCompat mThermalCpuPreference;
+    private SliderPreference mThermalCpuThresholdPreference;
 
     private BroadcastReceiver mScheduleStateReceiver;
 
@@ -165,6 +167,20 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         updateScheduleSummaries();
 
+        mThermalCpuPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_THERMAL_CPU_ENABLE);
+        mThermalCpuPreference.setOnPreferenceChangeListener(this);
+
+        mThermalCpuThresholdPreference = (SliderPreference) findPreference(Constants.GLYPH_THERMAL_CPU_THRESHOLD);
+        mThermalCpuThresholdPreference.setMin(60);
+        mThermalCpuThresholdPreference.setMax(95);
+        mThermalCpuThresholdPreference.setSliderIncrement(1);
+        mThermalCpuThresholdPreference.setValue(SettingsManager.getGlyphThermalCpuThreshold());
+        mThermalCpuThresholdPreference.setSummary(SettingsManager.getGlyphThermalCpuThreshold() + "°C");
+        mThermalCpuThresholdPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
+        mThermalCpuThresholdPreference.setTickVisible(false);
+        mThermalCpuThresholdPreference.setUpdatesContinuously(true);
+        mThermalCpuThresholdPreference.setOnPreferenceChangeListener(this);
+
         updateDependencies(glyphEnabled, mMusicVisualizerPreference.isChecked());
 
         mHandler.post(() -> ServiceUtils.checkGlyphService());
@@ -215,6 +231,9 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mScheduleModePreference.setEnabled(canEnableSubFeatures);
         mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
         mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
+
+        mThermalCpuPreference.setEnabled(canEnableSubFeatures);
+        mThermalCpuThresholdPreference.setEnabled(canEnableSubFeatures && mThermalCpuPreference.isChecked());
     }
 
     @Override
@@ -272,6 +291,20 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
             int mode = Integer.parseInt((String) newValue);
             SettingsManager.setGlyphScheduleMode(mode);
             updateDependencies(isGlyphEnabled, isMusicEnabled);
+            mHandler.post(() -> ServiceUtils.checkGlyphService());
+            return true;
+        }
+
+        if (preferenceKey.equals(Constants.GLYPH_THERMAL_CPU_ENABLE)) {
+            boolean enabled = (Boolean) newValue;
+            mThermalCpuThresholdPreference.setEnabled(enabled);
+            mHandler.post(() -> ServiceUtils.checkGlyphService());
+            return true;
+        }
+
+        if (preferenceKey.equals(Constants.GLYPH_THERMAL_CPU_THRESHOLD)) {
+            int value = (Integer) newValue;
+            mThermalCpuThresholdPreference.setSummary(value + "°C");
             mHandler.post(() -> ServiceUtils.checkGlyphService());
             return true;
         }

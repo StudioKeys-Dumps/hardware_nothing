@@ -234,4 +234,14 @@ public final class SettingsManager {
         }
         return nowMinutes >= startMinutes && nowMinutes < endMinutes;
     }
+
+    public static boolean isGlyphThermalCpuEnabled() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getBoolean(Constants.GLYPH_THERMAL_CPU_ENABLE, false) && isGlyphEnabled();
+    }
+
+    public static int getGlyphThermalCpuThreshold() {
+        return PreferenceManager.getDefaultSharedPreferences(context)
+                .getInt(Constants.GLYPH_THERMAL_CPU_THRESHOLD, 80);
+    }
 }

@@ -89,6 +89,10 @@
         <service
             android:name=".Services.ShakeDetectorService">
         </service>
+
+        <service
+            android:name=".Services.ThermalMonitorService">
+        </service>
  
         <service
             android:name=".Services.NotificationService"
