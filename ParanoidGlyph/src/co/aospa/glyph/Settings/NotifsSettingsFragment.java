@@ -144,10 +144,13 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
         if (saved == null || (!ArrayUtils.contains(notifAnims, saved)
                 && !saved.equals(Constants.GLYPH_NOTIFS_CUSTOM_VALUE))) {
             mListPreference.setValue(ResourceUtils.getString("glyph_settings_notifs_animations_default"));
+            saved = mListPreference.getValue();
         }
 
-        if (Constants.GLYPH_NOTIFS_CUSTOM_VALUE.equals(mListPreference.getValue())) {
+        if (Constants.GLYPH_NOTIFS_CUSTOM_VALUE.equals(saved)) {
             mListPreference.setSummary(getString(R.string.glyph_settings_notifs_sub_custom_sound_set));
+        } else {
+            mListPreference.setSummary(saved);
         }
     }
 
@@ -354,6 +357,7 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment
             } else {
                 Log.e(TAG, "Notification URI not found for: " + value);
             }
+            mListPreference.setSummary(value);
             playPreviewSynced(value, "notifications");
         }
 

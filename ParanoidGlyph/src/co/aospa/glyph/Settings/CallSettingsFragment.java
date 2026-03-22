@@ -97,10 +97,13 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
         if (saved == null || (!ArrayUtils.contains(callAnims, saved)
                 && !saved.equals(Constants.GLYPH_CALL_CUSTOM_VALUE))) {
             mListPreference.setValue(ResourceUtils.getString("glyph_settings_call_animations_default"));
+            saved = mListPreference.getValue();
         }
 
-        if (Constants.GLYPH_CALL_CUSTOM_VALUE.equals(mListPreference.getValue())) {
+        if (Constants.GLYPH_CALL_CUSTOM_VALUE.equals(saved)) {
             mListPreference.setSummary(getString(R.string.glyph_settings_call_sub_custom_ringtone_set));
+        } else {
+            mListPreference.setSummary(saved);
         }
     }
 
@@ -296,6 +299,8 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment
             } else {
                 Log.e(TAG, "Ringtone URI not found for: " + value);
             }
+
+            mListPreference.setSummary(value);
             playPreviewSynced(value, "ringtones");
         }
 
