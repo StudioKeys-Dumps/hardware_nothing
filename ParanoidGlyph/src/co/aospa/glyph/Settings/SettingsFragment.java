@@ -21,6 +21,7 @@ package co.aospa.glyph.Settings;
 import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
@@ -29,6 +30,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.widget.TimePicker;
+
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -44,6 +46,7 @@ import co.aospa.glyph.R;
 import co.aospa.glyph.Constants.Constants;
 import co.aospa.glyph.Manager.SettingsManager;
 import co.aospa.glyph.Manager.ShakeManager;
+import co.aospa.glyph.Services.CameraRecordingService;
 import co.aospa.glyph.Utils.ServiceUtils;
 
 public class SettingsFragment extends SettingsBasePreferenceFragment implements OnPreferenceChangeListener {
@@ -64,6 +67,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private Preference mScheduleEndPreference;
     private SwitchPreferenceCompat mThermalCpuPreference;
     private SliderPreference mThermalCpuThresholdPreference;
+    private SwitchPreferenceCompat mCameraRecordingLedPreference;
 
     private BroadcastReceiver mScheduleStateReceiver;
 
@@ -180,6 +184,11 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mThermalCpuThresholdPreference.setTickVisible(false);
         mThermalCpuThresholdPreference.setUpdatesContinuously(true);
         mThermalCpuThresholdPreference.setOnPreferenceChangeListener(this);
+        mCameraRecordingLedPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE);
+        if (mCameraRecordingLedPreference != null) {
+            mCameraRecordingLedPreference.setChecked(SettingsManager.isGlyphCameraRecordingLedEnabled());
+            mCameraRecordingLedPreference.setOnPreferenceChangeListener(this);
+        }
 
         updateDependencies(glyphEnabled, mMusicVisualizerPreference.isChecked());
 
@@ -193,7 +202,6 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
                         mMusicVisualizerPreference.isChecked()));
             }
         };
-        android.util.Log.d("GlyphSettingsFragment", "Registering SCHEDULE_STATE_CHANGED receiver");
         LocalBroadcastManager.getInstance(getActivity().getApplicationContext()).registerReceiver(
                 mScheduleStateReceiver,
                 new IntentFilter("co.aospa.glyph.SCHEDULE_STATE_CHANGED"));
@@ -234,6 +242,8 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         mThermalCpuPreference.setEnabled(canEnableSubFeatures);
         mThermalCpuThresholdPreference.setEnabled(canEnableSubFeatures && mThermalCpuPreference.isChecked());
+
+        if (mCameraRecordingLedPreference != null) mCameraRecordingLedPreference.setEnabled(canEnableSubFeatures);
     }
 
     @Override
@@ -270,14 +280,14 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
                     ShakeManager.stopShakeService(getContext());
                 }
             }, 100);
+            return true;
         }
 
         if (preferenceKey.equals(Constants.GLYPH_SHAKE_SENSITIVITY)) {
             if (mShakeTorchPreference.isChecked()) {
-                mHandler.postDelayed(() -> {
-                    ShakeManager.restartShakeService(getContext());
-                }, 100);
+                mHandler.postDelayed(() -> ShakeManager.restartShakeService(getContext()), 100);
             }
+            return true;
         }
 
         if (preferenceKey.equals(Constants.GLYPH_MUSIC_VISUALIZER_ENABLE)) {
@@ -306,6 +316,15 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
             int value = (Integer) newValue;
             mThermalCpuThresholdPreference.setSummary(value + "°C");
             mHandler.post(() -> ServiceUtils.checkGlyphService());
+            return true;
+        }
+
+        if (preferenceKey.equals(Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE)) {
+            boolean enabled = (Boolean) newValue;
+            SettingsManager.setGlyphCameraRecordingLedEnabled(enabled);
+            Intent intent = new Intent(getContext(), CameraRecordingService.class);
+            getContext().stopService(intent);
+            getContext().startService(intent);
             return true;
         }
 

@@ -244,4 +244,15 @@ public final class SettingsManager {
         return PreferenceManager.getDefaultSharedPreferences(context)
                 .getInt(Constants.GLYPH_THERMAL_CPU_THRESHOLD, 80);
     }
+
+    public static void setGlyphCameraRecordingLedEnabled(boolean enabled) {
+        Settings.Secure.putInt(context.getContentResolver(),
+            Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE, enabled ? 1 : 0);
+    }
+
+    public static boolean isGlyphCameraRecordingLedEnabled() {
+        return Settings.Secure.getInt(context.getContentResolver(),
+            Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE, 1) == 1;
+    }
+
 }

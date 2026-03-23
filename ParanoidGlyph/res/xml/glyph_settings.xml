@@ -172,6 +172,18 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="glyph_settings_camera"
+        android:title="@string/glyph_settings_camera_title">
+
+        <SwitchPreferenceCompat
+            android:key="glyph_settings_camera_recording_led_toggle"
+            android:defaultValue="true"
+            android:title="@string/glyph_settings_camera_recording_led_title"
+            android:summary="@string/glyph_settings_camera_recording_led_summary" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:key="glyph_settings_misc"
         android:title="@string/glyph_settings_misc_title">
 

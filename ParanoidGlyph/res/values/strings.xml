@@ -98,4 +98,9 @@
     <string name="glyph_settings_thermal_cpu_enable_summary">Enable Dot Glyph when CPU temperature reaches the defined limit</string>
     <string name="glyph_settings_thermal_cpu_threshold_title">Temperature limit</string>
 
+    <!-- Recording LED -->
+    <string name="glyph_settings_camera_title">Camera</string>
+    <string name="glyph_settings_camera_recording_led_title">Recording LED</string>
+    <string name="glyph_settings_camera_recording_led_summary">Enable up the red LED during video recording</string>
+
 </resources>

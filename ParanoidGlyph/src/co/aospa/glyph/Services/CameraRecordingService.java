@@ -31,6 +31,7 @@ import androidx.annotation.Nullable;
 
 import co.aospa.glyph.Utils.FileUtils;
 import co.aospa.glyph.Constants.Constants;
+import co.aospa.glyph.Manager.SettingsManager;
 
 public class CameraRecordingService extends Service {
 
@@ -78,10 +79,19 @@ public class CameraRecordingService extends Service {
         appOps.startWatchingActive(
                 new String[]{AppOpsManager.OPSTR_RECORD_AUDIO},
                 getMainExecutor(), micListener);
+        handler.post(this::evaluateRecordingState);
         return START_STICKY;
     }
 
     private void evaluateRecordingState() {
+        if (!SettingsManager.isGlyphCameraRecordingLedEnabled()) {
+            if (isRecordingLedOn) {
+                isRecordingLedOn = false;
+                FileUtils.writeLine(VIDEO_LED_PATH, 0);
+            }
+            return;
+        }
+
         boolean isRecording = cameraPackage != null
                 && micPackage != null
                 && cameraPackage.equals(micPackage)
