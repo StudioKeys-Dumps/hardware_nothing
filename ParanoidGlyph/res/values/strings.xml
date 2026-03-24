@@ -65,7 +65,8 @@
 
     <string name="glyph_settings_misc_title">Miscellaneous</string>
     <string name="glyph_settings_music_visualizer_toggle_title">Music Visualizer</string>
-    <string name="glyph_settings_music_visualizer_toggle_summary">This will make Glyph lights react to audio player on the device.\nAll other Glyph functions will get disabled when this is used.</string>
+    <string name="glyph_settings_music_visualizer_toggle_summary_short">Glyph lights react to audio</string>
+    <string name="glyph_settings_music_visualizer_long_description">Makes the Glyph lights react to audio playback on your device. All other Glyph features will be disabled while this is active.</string>
 
     <!-- QS tile -->
     <string name="glyph_accessibility_quick_settings">Glyph</string>

@@ -191,7 +191,11 @@
             android:key="glyph_settings_music_visualizer_toggle"
             android:defaultValue="false"
             android:title="@string/glyph_settings_music_visualizer_toggle_title"
-            android:summary="@string/glyph_settings_music_visualizer_toggle_summary" />
+            android:summary="@string/glyph_settings_music_visualizer_toggle_summary_short" />
+
+        <com.android.settingslib.widget.FooterPreference
+            android:key="music_visualizer_footer"
+            android:title="@string/glyph_settings_music_visualizer_long_description" />
 
     </PreferenceCategory>
 
