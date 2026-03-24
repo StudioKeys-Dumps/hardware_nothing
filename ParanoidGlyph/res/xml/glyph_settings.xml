@@ -31,7 +31,7 @@
         android:title="@string/glyph_settings_flip_toggle_title"
         android:summary="@string/glyph_settings_flip_toggle_summary" />
 
-    <SeekBarPreference
+    <com.android.settingslib.widget.SliderPreference
         android:key="glyph_settings_brightness"
         android:title="@string/glyph_settings_brightness" />
 

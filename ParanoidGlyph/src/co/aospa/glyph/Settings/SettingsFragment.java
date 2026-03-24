@@ -27,12 +27,12 @@ import android.provider.Settings;
 import androidx.preference.Preference;
 import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.SeekBarPreference;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.settingslib.PrimarySwitchPreference;
 import com.android.settingslib.widget.MainSwitchPreference;
 import com.android.settingslib.widget.SettingsBasePreferenceFragment;
+import com.android.settingslib.widget.SliderPreference;
 
 import co.aospa.glyph.R;
 import co.aospa.glyph.Constants.Constants;
@@ -42,7 +42,7 @@ import co.aospa.glyph.Utils.ServiceUtils;
 public class SettingsFragment extends SettingsBasePreferenceFragment implements OnPreferenceChangeListener {
 
     private SwitchPreferenceCompat mFlipPreference;
-    private SeekBarPreference mBrightnessPreference;
+    private SliderPreference mBrightnessPreference;
     private PrimarySwitchPreference mNotifsPreference;
     private PrimarySwitchPreference mCallPreference;
     private SwitchPreferenceCompat mChargingLevelPreference;
@@ -73,7 +73,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mFlipPreference.setEnabled(glyphEnabled);
         mFlipPreference.setOnPreferenceChangeListener(this);
 
-        mBrightnessPreference = (SeekBarPreference) findPreference(Constants.GLYPH_BRIGHTNESS);
+        mBrightnessPreference = (SliderPreference) findPreference(Constants.GLYPH_BRIGHTNESS);
         mBrightnessPreference.setEnabled(glyphEnabled);
         mBrightnessPreference.setMin(1);
         mBrightnessPreference.setMax(Constants.getBrightnessLevels().length);
