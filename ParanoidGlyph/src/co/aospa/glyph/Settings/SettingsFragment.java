@@ -231,7 +231,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mChargingLevelPreference.setEnabled(canEnableSubFeatures);
         mChargingPowersharePreference.setEnabled(canEnableSubFeatures);
         mVolumeLevelPreference.setEnabled(canEnableSubFeatures);
-        mMusicVisualizerPreference.setEnabled(glyphEnabled);
+        mMusicVisualizerPreference.setEnabled(glyphEnabled && !quietHours);
         mShakeTorchPreference.setEnabled(canEnableSubFeatures);
         mShakeSensitivityPreference.setEnabled(canEnableSubFeatures && mShakeTorchPreference.isChecked());
         mHapticPreference.setEnabled(canEnableSubFeatures);
