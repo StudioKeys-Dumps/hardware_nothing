@@ -184,6 +184,7 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mThermalCpuThresholdPreference.setTickVisible(false);
         mThermalCpuThresholdPreference.setUpdatesContinuously(true);
         mThermalCpuThresholdPreference.setOnPreferenceChangeListener(this);
+
         mCameraRecordingLedPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE);
         if (mCameraRecordingLedPreference != null) {
             mCameraRecordingLedPreference.setChecked(SettingsManager.isGlyphCameraRecordingLedEnabled());
@@ -236,9 +237,9 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mHapticPreference.setEnabled(canEnableSubFeatures);
 
         boolean scheduleCustom = SettingsManager.getGlyphScheduleMode() == 1;
-        mScheduleModePreference.setEnabled(canEnableSubFeatures);
-        mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
-        mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
+        mScheduleModePreference.setEnabled(glyphEnabled && !musicEnabled);
+        mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom && !quietHours);
+        mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom && !quietHours);
 
         mThermalCpuPreference.setEnabled(canEnableSubFeatures);
         mThermalCpuThresholdPreference.setEnabled(canEnableSubFeatures && mThermalCpuPreference.isChecked());
