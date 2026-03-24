@@ -77,7 +77,10 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mBrightnessPreference.setEnabled(glyphEnabled);
         mBrightnessPreference.setMin(1);
         mBrightnessPreference.setMax(Constants.getBrightnessLevels().length);
+        mBrightnessPreference.setSliderIncrement(1);
+        mBrightnessPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
         mBrightnessPreference.setValue(SettingsManager.getGlyphBrightnessSetting());
+        mBrightnessPreference.setTickVisible(true);
         mBrightnessPreference.setUpdatesContinuously(true);
         mBrightnessPreference.setOnPreferenceChangeListener(this);
 
