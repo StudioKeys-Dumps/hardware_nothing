@@ -238,8 +238,8 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         boolean scheduleCustom = SettingsManager.getGlyphScheduleMode() == 1;
         mScheduleModePreference.setEnabled(glyphEnabled && !musicEnabled);
-        mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom && !quietHours);
-        mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom && !quietHours);
+        mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
+        mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
 
         mThermalCpuPreference.setEnabled(canEnableSubFeatures);
         mThermalCpuThresholdPreference.setEnabled(canEnableSubFeatures && mThermalCpuPreference.isChecked());
