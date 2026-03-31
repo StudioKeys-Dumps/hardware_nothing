@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -58,21 +58,14 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
     private static final String TAG = "GlyphNotifsSettingsFragment";
 
     private PreferenceScreen mScreen;
-
     private PreferenceCategory mCategory;
-
     private List<String> mEssentialApps = new ArrayList<String>();
     private List<String> mEssentialAppsNames = new ArrayList<String>();
-
     private PackageManager mPackageManager;
-
     private ListPreference mListPreference;
     private MultiSelectListPreference mMultiSelectListPreference;
-
     private GlyphAnimationPreference mGlyphAnimationPreference;
-
     private Handler mHandler = new Handler();
-
     private MediaPlayer mMediaPlayer;
 
     @Override
@@ -127,21 +120,32 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphNotifsEnabled(),
-                SettingsManager.getGlyphNotifsAnimation(), 1500);
+        mHandler.postDelayed(() -> {
+            playPreviewSynced(SettingsManager.getGlyphNotifsAnimation(), "notifications");
+        }, 300);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mHandler.removeCallbacksAndMessages(null);
         stopPreview();
     }
 
     private void stopPreview() {
+        if (mGlyphAnimationPreference != null) {
+            mGlyphAnimationPreference.updateAnimation(false, "", 0, false);
+        }
+
         if (mMediaPlayer != null) {
-            if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
+            try {
+                if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
+            } catch (Exception e) {
+                Log.e(TAG, "Error stopping player: " + e.getMessage());
+            } finally {
+                mMediaPlayer.release();
+                mMediaPlayer = null;
+            }
         }
     }
 
@@ -165,28 +169,37 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
         return null;
     }
 
-    private void playPreview(String name, String type) {
+    private void playPreviewSynced(String name, String type) {
         stopPreview();
-        new Thread(() -> {
-            try {
-                String path = "/product/media/audio/" + type + "/" + name + ".ogg";
-                Log.d(TAG, "Playing preview from path: " + path);
-                mMediaPlayer = new MediaPlayer();
-                mMediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build());
-                mMediaPlayer.setDataSource(path);
-                mMediaPlayer.prepare();
-                mMediaPlayer.start();
-                mMediaPlayer.setOnCompletionListener(mp -> {
-                    mp.release();
-                    mMediaPlayer = null;
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to play preview: " + e.getMessage());
+
+        mHandler.postDelayed(() -> {
+            if (mGlyphAnimationPreference != null) {
+                mGlyphAnimationPreference.updateAnimation(true, name, 0, true);
             }
-        }).start();
+
+            new Thread(() -> {
+                try {
+                    String path = "/product/media/audio/" + type + "/" + name + ".ogg";
+                    mMediaPlayer = new MediaPlayer();
+                    mMediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build());
+                    mMediaPlayer.setDataSource(path);
+                    mMediaPlayer.prepare();
+                    mMediaPlayer.start();
+                    mMediaPlayer.setOnCompletionListener(mp -> {
+                        if (mGlyphAnimationPreference != null) {
+                            mGlyphAnimationPreference.updateAnimation(false, name, 0, false);
+                        }
+                        mp.release();
+                        mMediaPlayer = null;
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to play preview: " + e.getMessage());
+                }
+            }).start();
+        }, 50);
     }
 
     @Override
@@ -197,14 +210,13 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
             boolean isChecked = (Boolean) newValue;
             SettingsManager.setGlyphNotifsEnabled(isChecked);
             ServiceUtils.checkGlyphService();
-            mGlyphAnimationPreference.updateAnimation(isChecked,
-                    SettingsManager.getGlyphNotifsAnimation(), 1500);
+            if (mGlyphAnimationPreference != null) {
+                mGlyphAnimationPreference.updateAnimation(isChecked,
+                        SettingsManager.getGlyphNotifsAnimation(), 0, false);
+            }
         }
 
         if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ANIMATIONS)) {
-            mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphNotifsEnabled(),
-                    newValue.toString(), 1500);
-
             Uri soundUri = getNotificationUri(newValue.toString());
             if (soundUri != null) {
                 RingtoneManager.setActualDefaultRingtoneUri(getContext(),
@@ -213,17 +225,9 @@ public class NotifsSettingsFragment extends SettingsBasePreferenceFragment imple
             } else {
                 Log.e(TAG, "Notification URI not found for: " + newValue.toString());
             }
-
-            playPreview(newValue.toString(), "notifications");
+            playPreviewSynced(newValue.toString(), "notifications");
         }
-
-        if (preferenceKey.equals(Constants.GLYPH_NOTIFS_SUB_ESSENTIAL)) {
-            //if (DEBUG) Log.d(TAG, "onPreferenceChange: " + newValue.toString());
-        }
-
-        //mHandler.post(() -> ServiceUtils.checkGlyphService());
 
         return true;
     }
-
 }

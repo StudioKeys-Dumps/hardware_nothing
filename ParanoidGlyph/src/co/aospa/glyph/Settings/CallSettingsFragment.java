@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -47,21 +47,15 @@ import co.aospa.glyph.Utils.ServiceUtils;
 public class CallSettingsFragment extends SettingsBasePreferenceFragment implements OnPreferenceChangeListener {
 
     private static final String TAG = "GlyphCallSettingsFragment";
-
     private PreferenceScreen mScreen;
-
     private ListPreference mListPreference;
-
     private GlyphAnimationPreference mGlyphAnimationPreference;
-
     private Handler mHandler = new Handler();
-
     private MediaPlayer mMediaPlayer;
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         addPreferencesFromResource(R.xml.glyph_call_settings);
-
         mScreen = this.getPreferenceScreen();
         getActivity().setTitle(R.string.glyph_settings_call_toggle_title);
 
@@ -83,21 +77,32 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphCallEnabled(),
-                SettingsManager.getGlyphCallAnimation());
+        mHandler.postDelayed(() -> {
+            playPreviewSynced(SettingsManager.getGlyphCallAnimation(), "ringtones");
+        }, 300);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mHandler.removeCallbacksAndMessages(null);
         stopPreview();
     }
 
     private void stopPreview() {
+        if (mGlyphAnimationPreference != null) {
+            mGlyphAnimationPreference.updateAnimation(false, "", 0, false);
+        }
+
         if (mMediaPlayer != null) {
-            if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
+            try {
+                if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
+            } catch (Exception e) {
+                Log.e(TAG, "Error stopping player: " + e.getMessage());
+            } finally {
+                mMediaPlayer.release();
+                mMediaPlayer = null;
+            }
         }
     }
 
@@ -121,28 +126,37 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
         return null;
     }
 
-    private void playPreview(String name, String type) {
+    private void playPreviewSynced(String name, String type) {
         stopPreview();
-        new Thread(() -> {
-            try {
-                String path = "/product/media/audio/" + type + "/" + name + ".ogg";
-                Log.d(TAG, "Playing preview from path: " + path);
-                mMediaPlayer = new MediaPlayer();
-                mMediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build());
-                mMediaPlayer.setDataSource(path);
-                mMediaPlayer.prepare();
-                mMediaPlayer.start();
-                mMediaPlayer.setOnCompletionListener(mp -> {
-                    mp.release();
-                    mMediaPlayer = null;
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to play preview: " + e.getMessage());
+
+        mHandler.postDelayed(() -> {
+            if (mGlyphAnimationPreference != null) {
+                mGlyphAnimationPreference.updateAnimation(true, name, 0, true);
             }
-        }).start();
+
+            new Thread(() -> {
+                try {
+                    String path = "/product/media/audio/" + type + "/" + name + ".ogg";
+                    mMediaPlayer = new MediaPlayer();
+                    mMediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build());
+                    mMediaPlayer.setDataSource(path);
+                    mMediaPlayer.prepare();
+                    mMediaPlayer.start();
+                    mMediaPlayer.setOnCompletionListener(mp -> {
+                        if (mGlyphAnimationPreference != null) {
+                            mGlyphAnimationPreference.updateAnimation(false, name, 0, false);
+                        }
+                        mp.release();
+                        mMediaPlayer = null;
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to play preview: " + e.getMessage());
+                }
+            }).start();
+        }, 50);
     }
 
     @Override
@@ -153,14 +167,10 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
             boolean isChecked = (Boolean) newValue;
             SettingsManager.setGlyphCallEnabled(isChecked);
             ServiceUtils.checkGlyphService();
-            mGlyphAnimationPreference.updateAnimation(isChecked,
-                    SettingsManager.getGlyphCallAnimation());
+            mGlyphAnimationPreference.updateAnimation(isChecked, SettingsManager.getGlyphCallAnimation());
         }
 
         if (preferenceKey.equals(Constants.GLYPH_CALL_SUB_ANIMATIONS)) {
-            mGlyphAnimationPreference.updateAnimation(SettingsManager.isGlyphCallEnabled(),
-                    newValue.toString());
-
             Uri soundUri = getRingtoneUri(newValue.toString());
             if (soundUri != null) {
                 RingtoneManager.setActualDefaultRingtoneUri(getContext(),
@@ -169,13 +179,8 @@ public class CallSettingsFragment extends SettingsBasePreferenceFragment impleme
             } else {
                 Log.e(TAG, "Ringtone URI not found for: " + newValue.toString());
             }
-
-            playPreview(newValue.toString(), "ringtones");
+            playPreviewSynced(newValue.toString(), "ringtones");
         }
-
-        //mHandler.post(() -> ServiceUtils.checkGlyphService());
-
         return true;
     }
-
 }

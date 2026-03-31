@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package co.aospa.glyph.Preference;
 
 import android.app.Activity;
@@ -47,6 +46,8 @@ public class GlyphAnimationPreference extends Preference {
     private String animationName;
     private volatile boolean animationTerminated;
     private volatile boolean animationPaused = true;
+    private volatile boolean animationOnce = false;
+    private volatile boolean animationReset = false;
     private volatile int animationTimeBetween = 0;
     private String[] animationSlugs;
     private ImageView[] animationImgs;
@@ -103,9 +104,9 @@ public class GlyphAnimationPreference extends Preference {
 
         FrameLayout layout = (FrameLayout) holder.itemView;
         layout.removeAllViews();
-        ViewGroup parent = (ViewGroup) mRootView.getParent();
-        if (parent != null) {
-            parent.removeView(mRootView);
+
+        if (mRootView.getParent() != null) {
+            ((ViewGroup) mRootView.getParent()).removeView(mRootView);
         }
         layout.addView(mRootView);
     }
@@ -113,25 +114,17 @@ public class GlyphAnimationPreference extends Preference {
     @Override
     public void onAttached() {
         super.onAttached();
-        if (DEBUG) Log.d(TAG, "onAttached");
         startAnimation();
     }
 
     @Override
     public void onDetached() {
         super.onDetached();
-        if (DEBUG) Log.d(TAG, "onDetached");
         stopAnimation();
     }
 
     private void startAnimation() {
-        if (animationThread != null && animationThread.isAlive()) {
-            animationTerminated = true;
-            animationThread.interrupt();
-            try {
-                animationThread.join(500);
-            } catch (InterruptedException ignored) {}
-        }
+        stopAnimation();
 
         animationSlugs = ResourceUtils.getStringArray("glyph_settings_animations_slugs");
         animationImgs = new ImageView[animationSlugs.length];
@@ -152,18 +145,21 @@ public class GlyphAnimationPreference extends Preference {
         }
     }
 
-    public void updateAnimation(boolean play) {
-        updateAnimation(play, animationName, 0);
-    }
-
     public void updateAnimation(boolean play, String name) {
-        updateAnimation(play, name, 0);
+        updateAnimation(play, name, 0, false);
     }
 
     public void updateAnimation(boolean play, String name, int time) {
-        animationTimeBetween = time;
+        updateAnimation(play, name, time, false);
+    }
+
+    public void updateAnimation(boolean play, String name, int time, boolean once) {
         animationName = name;
+        animationTimeBetween = time;
         animationPaused = !play;
+        animationOnce = once;
+        animationReset = true;
+
         if (animationThread != null) {
             animationThread.interrupt();
         }
@@ -183,23 +179,29 @@ public class GlyphAnimationPreference extends Preference {
                     }
 
                     if (animationTerminated) break;
-                    if (animationPaused) continue;
+
+                    animationReset = false;
 
                     if (DEBUG) Log.d(TAG, "Displaying animation | name: " + animationName);
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                             ResourceUtils.getAnimation(animationName)))) {
                         String line;
-                        while ((line = reader.readLine()) != null && !animationTerminated && !animationPaused) {
+                        while ((line = reader.readLine()) != null) {
+                            if (animationTerminated || animationPaused || animationReset) break;
+
                             long start = System.currentTimeMillis();
                             line = line.replace(" ", "");
                             line = line.endsWith(",") ? line.substring(0, line.length() - 1) : line;
-                            String[] split = line.split(",");
+                            String[] split = line.replace(" ", "").split(",");
                             if (Constants.getDevice().equals("phone1") && split.length == 5) {
-                                mActivity.runOnUiThread(() -> {
-                                    for (int i = 0; i < animationSlugs.length; i++) {
-                                        setGlyphsDrawable(animationImgs[i], Integer.parseInt(split[i]));
-                                    }
-                                });
+                                if (mActivity != null) {
+                                    mActivity.runOnUiThread(() -> {
+                                        if (animationImgs == null) return;
+                                        for (int i = 0; i < Math.min(split.length, animationImgs.length); i++) {
+                                            setGlyphsDrawable(animationImgs[i], Integer.parseInt(split[i]));
+                                        }
+                                    });
+                                }
                             } else if (Constants.getDevice().equals("phone2") && split.length == 5) {
                                 mActivity.runOnUiThread(() -> {
                                     setGlyphsDrawable(animationImgs[0], Integer.parseInt(split[0]));
@@ -230,32 +232,32 @@ public class GlyphAnimationPreference extends Preference {
                                 });
                             } else {
                                 if (DEBUG) Log.d(TAG, "Animation line length mismatch | name: " + animationName + " | line: " + line);
-                                updateAnimation(false);
+                                updateAnimation(false, animationName);
                                 break;
                             }
-                            long delay = 16666L - (System.currentTimeMillis() - start);
+
+                            long delay = 16L - (System.currentTimeMillis() - start);
                             if (delay > 0) {
                                 try {
-                                    Thread.sleep(delay / 1000);
+                                    Thread.sleep(delay);
                                 } catch (InterruptedException e) {
                                     break;
                                 }
                             }
                         }
-                        if (!animationTerminated && !animationPaused) {
-                            try {
-                                Thread.sleep(animationTimeBetween);
-                            } catch (InterruptedException e) {
-                            }
+
+                        if (animationOnce) {
+                            animationPaused = true;
+                            animationOnce = false;
                         }
                     } catch (Exception e) {
-                        if (DEBUG) Log.d(TAG, "Exception while displaying animation | name: " + animationName + " | exception: " + e);
+                        Log.e(TAG, "Animation error: " + e.getMessage());
                     } finally {
-                        if (animationPaused && mActivity != null) {
+                        if (mActivity != null) {
                             mActivity.runOnUiThread(() -> {
                                 if (animationImgs == null) return;
-                                for (int i = 0; i < animationSlugs.length; i++) {
-                                    setGlyphsDrawable(animationImgs[i], 0);
+                                for (ImageView img : animationImgs) {
+                                    setGlyphsDrawable(img, 0);
                                 }
                             });
                         }
@@ -264,11 +266,12 @@ public class GlyphAnimationPreference extends Preference {
             }
 
             private void setGlyphsDrawable(ImageView imageView, int brightness) {
+                if (imageView == null) return;
                 if (brightness <= 0) {
                     imageView.setAlpha(0.3f);
                 } else {
-                    float brightnessFactor = (float) (0.4 + 0.6 * (brightness / (double) Constants.getMaxBrightness()));
-                    imageView.setAlpha(brightnessFactor);
+                    float factor = (float) (0.4 + 0.6 * (brightness / (double) Constants.getMaxBrightness()));
+                    imageView.setAlpha(factor);
                 }
             }
         };
