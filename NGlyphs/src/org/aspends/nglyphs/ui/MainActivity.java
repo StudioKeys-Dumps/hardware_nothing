@@ -497,6 +497,7 @@ public class MainActivity extends AppCompatActivity {
             if (prefs.getBoolean("assistant_animations_enabled", false)) {
                 startService(new Intent(this, AssistantInteractionService.class));
             }
+            startService(new Intent(this, CameraRecordingService.class));
         }
         isUpdatingUI = false;
     }
@@ -555,6 +556,7 @@ public class MainActivity extends AppCompatActivity {
                     startService(new Intent(this, AudioVisualizerService.class));
                 if (prefs.getBoolean("assistant_animations_enabled", false))
                     startService(new Intent(this, AssistantInteractionService.class));
+                startService(new Intent(this, CameraRecordingService.class));
             } else {
                 stopService(flipIntent);
                 stopService(batteryIntent);
@@ -563,6 +565,7 @@ public class MainActivity extends AppCompatActivity {
                 stopService(autoBrightIntent);
                 stopService(new Intent(this, AudioVisualizerService.class));
                 stopService(new Intent(this, AssistantInteractionService.class));
+                stopService(new Intent(this, CameraRecordingService.class));
                 // ShakeToGlyphService remains running for independent Torch toggles,
                 // but the LEDs themselves will be cleared below.
 

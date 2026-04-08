@@ -21,6 +21,12 @@ public class BootCompletedReceiver extends BroadcastReceiver {
                 || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
             Log.i(TAG, "Starting Glyph services after boot: " + action);
 
+            try {
+                context.startService(new Intent(context, CameraRecordingService.class));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start CameraRecordingService", e);
+            }
+
             SharedPreferences prefs = context.getSharedPreferences(
                     context.getString(R.string.pref_file), Context.MODE_PRIVATE);
 
