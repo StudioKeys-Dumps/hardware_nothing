@@ -83,7 +83,7 @@ public class AudioVisualizerService extends Service {
 
             @Override
             public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
-                if (isRunning && mAudioManager.isMusicActive() && !SleepGuard.isBlocked(mPrefs)
+                if (isRunning && isAudioActive() && !SleepGuard.isBlocked(mPrefs)
                         && !isScreenOffBlocked()) {
                     if (visualizerMode == MODE_BEAT) {
                         processBeatFFT(fft);
@@ -95,6 +95,20 @@ public class AudioVisualizerService extends Service {
         }, Visualizer.getMaxCaptureRate() / 2, false, true);
 
         mVisualizer.setEnabled(true);
+    }
+
+    private static volatile boolean sRingtonePreviewActive = false;
+
+    /**
+     * Signal that a ringtone preview is active so the visualizer responds
+     * to non-music audio (STREAM_RING / STREAM_NOTIFICATION).
+     */
+    public static void setRingtonePreviewActive(boolean active) {
+        sRingtonePreviewActive = active;
+    }
+
+    private boolean isAudioActive() {
+        return mAudioManager.isMusicActive() || sRingtonePreviewActive;
     }
 
     private boolean isScreenOffBlocked() {

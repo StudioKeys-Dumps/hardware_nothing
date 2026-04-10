@@ -128,6 +128,9 @@ public class GlyphNotificationListener
         prefs = getSharedPreferences(getString(R.string.pref_file), MODE_PRIVATE);
         loadIgnoredKeys();
 
+        // Register ringtone sync observer early — this service starts automatically
+        RingtoneSyncObserver.register(getApplicationContext());
+
         unlockReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

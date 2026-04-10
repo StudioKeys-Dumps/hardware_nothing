@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="main_header">Glyph Интерфейс</string>
-    <string name="card_ringtones">Анимация вызова</string>
-    <string name="card_notifications">Анимация уведомлений</string>
+    <string name="card_ringtones">Рингтон</string>
+    <string name="card_notifications">Звук уведомления</string>
     <string name="master_switch_label">Индикаторы Glyph</string>
     <string name="tile_master_label">Индикаторы Glyph</string>
     <string name="tile_light_label">Подсветка Glyph</string>
     <string name="flip_to_glyph_label">Flip to Glyph</string>
 	<string name="flip_to_glyph_desc">Положите телефон экраном вниз для беззвучного режима и Glyph индикации</string>
     <string name="pref_file">Настройки Glyph</string>
-    <string name="style_title">Стиль уведомлений</string>
+    <string name="style_title">Звук уведомления</string>
     <string name="cancel">Отмена</string>
     <string name="exit">Выйти</string>
     <string name="features">Функции</string>

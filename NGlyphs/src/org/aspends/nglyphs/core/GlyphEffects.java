@@ -995,6 +995,36 @@ public class GlyphEffects {
         AnimationManager.refreshBackgroundState();
     }
 
+    /**
+     * Stage an app-internal file into external cache so mediaserver (s0)
+     * can read it. Internal paths carry per-app MLS categories that block
+     * mediaserver; external cache is labelled media_rw_data_file.
+     */
+    private static java.io.File stageForMediaserver(
+            android.content.Context context, java.io.File src) throws java.io.IOException {
+        if (context == null || src == null || !src.exists()) {
+            return src;
+        }
+        java.io.File extCache = context.getExternalCacheDir();
+        if (extCache == null) {
+            return src;
+        }
+        java.io.File staged = new java.io.File(extCache, "preview_" + src.getName());
+        if (staged.exists() && staged.length() == src.length()
+                && staged.lastModified() >= src.lastModified()) {
+            return staged;
+        }
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(src);
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(staged)) {
+            byte[] buf = new byte[4096];
+            int len;
+            while ((len = fis.read(buf)) > 0) {
+                fos.write(buf, 0, len);
+            }
+        }
+        return staged;
+    }
+
     private static void executeCustomRingtone(java.io.File oggFile, int brightness,
             Vibrator vibrator, android.content.Context context, int audioStreamType, long sessionId,
             boolean forceAudio) {
@@ -1026,8 +1056,9 @@ public class GlyphEffects {
                             "GlyphEffects", "File does not exist: " + oggFile.getAbsolutePath());
                 }
 
+                java.io.File playable = stageForMediaserver(context, oggFile);
                 previewPlayer = new android.media.MediaPlayer();
-                previewPlayer.setDataSource(oggFile.getAbsolutePath());
+                previewPlayer.setDataSource(playable.getAbsolutePath());
 
                 int usage = android.media.AudioAttributes.USAGE_NOTIFICATION;
                 if (audioStreamType == android.media.AudioManager.STREAM_RING) {

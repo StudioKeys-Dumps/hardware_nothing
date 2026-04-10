@@ -20,6 +20,7 @@ public class BootCompletedReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
             Log.i(TAG, "Starting Glyph services after boot: " + action);
+            RingtoneSyncObserver.register(context.getApplicationContext());
 
             try {
                 context.startService(new Intent(context, CameraRecordingService.class));

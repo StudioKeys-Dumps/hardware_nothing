@@ -57,7 +57,14 @@ public class OggGlyphEncoder {
     private List<int[]> analyze(File input, boolean isExtended, ProgressListener listener)
             throws Exception {
         MediaExtractor extractor = new MediaExtractor();
-        extractor.setDataSource(input.getAbsolutePath());
+        try {
+            extractor.setDataSource(input.getAbsolutePath());
+        } catch (Exception e) {
+            // Fallback: try FileDescriptor if path-based access fails
+            java.io.FileInputStream fis = new java.io.FileInputStream(input);
+            extractor.setDataSource(fis.getFD());
+            fis.close();
+        }
 
         int trackIndex = -1;
         for (int i = 0; i < extractor.getTrackCount(); i++) {

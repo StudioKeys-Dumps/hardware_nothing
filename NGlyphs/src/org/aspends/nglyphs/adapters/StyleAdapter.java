@@ -51,6 +51,7 @@ public class StyleAdapter extends RecyclerView.Adapter<StyleAdapter.ViewHolder> 
 
     private OnItemClickListener clickListener;
     private OnSelectionChangedListener selectionChangedListener;
+    private android.media.MediaPlayer currentPreviewPlayer;
 
     public StyleAdapter(Context context, List<String> names, List<String> values,
             int selectedPosition, Vibrator vibrator, int audioStreamType,
@@ -135,6 +136,77 @@ public class StyleAdapter extends RecyclerView.Adapter<StyleAdapter.ViewHolder> 
                 vibrator.vibrate(android.os.VibrationEffect.createOneShot(15, 80));
             }
 
+            // Stop any existing preview
+            if (currentPreviewPlayer != null) {
+                try {
+                    currentPreviewPlayer.stop();
+                    currentPreviewPlayer.release();
+                } catch (Exception ignored) {}
+                currentPreviewPlayer = null;
+            }
+
+            // Preview must live under external cache (media_rw_data_file) so that
+            // mediaserver can read it — internal cache carries per-app MLS
+            // categories that block mediaserver access.
+            if (!isCustom && folderName != null) {
+                try {
+                    String oggName = value + ".ogg";
+                    String assetPath = folderName + "/" + oggName;
+                    java.io.File cacheDir = context.getExternalCacheDir();
+                    if (cacheDir == null) cacheDir = context.getCacheDir();
+                    java.io.File cacheFile = new java.io.File(cacheDir, "preview_" + oggName);
+                    if (!cacheFile.exists()) {
+                        try (java.io.InputStream is = context.getAssets().open(assetPath);
+                             java.io.FileOutputStream fos = new java.io.FileOutputStream(cacheFile)) {
+                            byte[] buf = new byte[4096];
+                            int len;
+                            while ((len = is.read(buf)) > 0) fos.write(buf, 0, len);
+                        }
+                    }
+                    android.media.MediaPlayer mp = new android.media.MediaPlayer();
+                    mp.setDataSource(cacheFile.getAbsolutePath());
+                    int usage = (audioStreamType == android.media.AudioManager.STREAM_RING)
+                            ? android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE
+                            : android.media.AudioAttributes.USAGE_NOTIFICATION;
+                    mp.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                            .setUsage(usage)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build());
+                    mp.setOnPreparedListener(preparedMp -> {
+                        if (currentPreviewPlayer == preparedMp) {
+                            try {
+                                preparedMp.start();
+                            } catch (Exception ignored) {}
+                        } else {
+                            try {
+                                preparedMp.release();
+                            } catch (Exception ignored) {}
+                        }
+                    });
+                    mp.setOnCompletionListener(completedMp -> {
+                        try {
+                            completedMp.release();
+                        } catch (Exception ignored) {}
+                        if (currentPreviewPlayer == completedMp) {
+                            currentPreviewPlayer = null;
+                        }
+                    });
+                    mp.setOnErrorListener((errMp, what, extra) -> {
+                        try {
+                            errMp.release();
+                        } catch (Exception ignored) {}
+                        if (currentPreviewPlayer == errMp) {
+                            currentPreviewPlayer = null;
+                        }
+                        return true;
+                    });
+                    currentPreviewPlayer = mp;
+                    mp.prepareAsync();
+                } catch (Exception e) {
+                    // No paired OGG or playback error — silent preview
+                }
+            }
+
             if (clickListener != null) {
                 clickListener.onItemClick(name);
             }
@@ -191,6 +263,16 @@ public class StyleAdapter extends RecyclerView.Adapter<StyleAdapter.ViewHolder> 
     @Override
     public int getItemCount() {
         return names.size();
+    }
+
+    public void stopPreview() {
+        if (currentPreviewPlayer != null) {
+            try {
+                currentPreviewPlayer.stop();
+                currentPreviewPlayer.release();
+            } catch (Exception ignored) {}
+            currentPreviewPlayer = null;
+        }
     }
 
     public int getSelectedPosition() { return selectedPosition; }

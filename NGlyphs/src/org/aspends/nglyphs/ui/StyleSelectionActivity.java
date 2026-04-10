@@ -28,6 +28,7 @@ import org.aspends.nglyphs.core.AnimationManager;
 import org.aspends.nglyphs.core.GlyphEffects;
 import org.aspends.nglyphs.core.GlyphManagerV2;
 import org.aspends.nglyphs.util.CustomRingtoneManager;
+import org.aspends.nglyphs.services.RingtoneSyncObserver;
 import org.aspends.nglyphs.util.RingtoneHelper;
 
 public class StyleSelectionActivity extends AppCompatActivity {
@@ -80,7 +81,7 @@ public class StyleSelectionActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         TextView tvTitle = findViewById(R.id.tvTitle);
-        TextView tvCurrentPattern = findViewById(R.id.tvCurrentPattern);
+        TextView tvCurrentRingtone = findViewById(R.id.tvCurrentRingtone);
 
         if (titleRes != 0) {
             tvTitle.setText(titleRes);
@@ -115,7 +116,7 @@ public class StyleSelectionActivity extends AppCompatActivity {
         AnimationManager.setFrameListener(frameListener);
 
         // Initialize current pattern label
-        updateCurrentPatternLabel(tvCurrentPattern);
+        updateCurrentPatternLabel(tvCurrentRingtone);
 
         MaterialButton btnApply = findViewById(R.id.btnApply);
         btnApply.setOnClickListener(v -> {
@@ -143,6 +144,7 @@ public class StyleSelectionActivity extends AppCompatActivity {
                                                        == android.media.AudioManager.STREAM_RING)
                                             ? RingtoneManager.TYPE_RINGTONE
                                             : RingtoneManager.TYPE_NOTIFICATION;
+                                    RingtoneSyncObserver.setSelfUpdating(type, true);
                                     RingtoneHelper.setSystemTone(this, is,
                                             CustomRingtoneManager.cleanStyleName(finalSelection),
                                             type);
@@ -151,6 +153,23 @@ public class StyleSelectionActivity extends AppCompatActivity {
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
+                    }
+                }
+
+                // Auto-apply system tone for built-in entries
+                if (activeAdapter == adapterBuiltIn && !isFlipMode) {
+                    try {
+                        String oggName = finalSelection + ".ogg";
+                        InputStream is = getAssets().open(folderName + "/" + oggName);
+                        int type = (audioStreamType == android.media.AudioManager.STREAM_RING)
+                                ? RingtoneManager.TYPE_RINGTONE
+                                : RingtoneManager.TYPE_NOTIFICATION;
+                        RingtoneSyncObserver.setSelfUpdating(type, true);
+                        RingtoneHelper.setSystemTone(this, is,
+                                CustomRingtoneManager.cleanStyleName(finalSelection), type);
+                        is.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
 
@@ -164,10 +183,10 @@ public class StyleSelectionActivity extends AppCompatActivity {
         if (btnImportedInfo != null) {
             btnImportedInfo.setOnClickListener(v -> {
                 new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                        .setTitle("Imported Patterns")
-                        .setMessage("Custom patterns must be previewed directly on the back of the "
+                        .setTitle(R.string.imported_ringtones)
+                        .setMessage("Custom ringtones must be previewed directly on the back of the "
                                     + "device. Live UI preview is only supported for built-in "
-                                    + "patterns.")
+                                    + "ringtones.")
                         .setPositiveButton("Got it", null)
                         .show();
             });
@@ -261,6 +280,17 @@ public class StyleSelectionActivity extends AppCompatActivity {
         audioStreamType = isCall ? android.media.AudioManager.STREAM_RING
                                  : android.media.AudioManager.STREAM_NOTIFICATION;
 
+        // Update section headers based on call vs notification
+        TextView tvHeaderBuiltIn = findViewById(R.id.tvHeaderBuiltIn);
+        TextView tvHeaderImported = findViewById(R.id.tvHeaderImported);
+        if (isCall) {
+            tvHeaderBuiltIn.setText(R.string.builtin_ringtones);
+            tvHeaderImported.setText(R.string.imported_ringtones);
+        } else {
+            tvHeaderBuiltIn.setText(R.string.builtin_sounds);
+            tvHeaderImported.setText(R.string.imported_sounds);
+        }
+
         StyleAdapter.SharedPreferencesProvider provider = () -> prefs.getInt("brightness", 2048);
 
         adapterBuiltIn = new StyleAdapter(this, builtInNames, builtInValues, builtInSel, vibrator,
@@ -277,7 +307,7 @@ public class StyleSelectionActivity extends AppCompatActivity {
             } else {
                 adapterBuiltIn.clearSelection();
             }
-            updateCurrentPatternLabel(findViewById(R.id.tvCurrentPattern));
+            updateCurrentPatternLabel(findViewById(R.id.tvCurrentRingtone));
         };
 
         adapterBuiltIn.setOnSelectionChangedListener(listener);
@@ -297,6 +327,8 @@ public class StyleSelectionActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        if (adapterBuiltIn != null) adapterBuiltIn.stopPreview();
+        if (adapterImported != null) adapterImported.stopPreview();
         GlyphEffects.stopCustomRingtone();
         super.onPause();
     }

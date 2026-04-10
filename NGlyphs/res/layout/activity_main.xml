@@ -177,7 +177,7 @@
                                     android:textSize="16sp" />
 
                                 <TextView
-                                    android:id="@+id/textCurrentCallStyle"
+                                    android:id="@+id/textCurrentRingtone"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
@@ -227,7 +227,7 @@
                                     android:textSize="16sp" />
 
                                 <TextView
-                                    android:id="@+id/textCurrentNotifStyle"
+                                    android:id="@+id/textCurrentNotifSound"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"

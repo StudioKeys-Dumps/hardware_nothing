@@ -6,8 +6,8 @@
     <string name="app_name" translatable="false">Glyph Manager</string>
     <string name="main_header">Glyph Interface</string>
     <string name="glyph_settings_summary">Options for Glyph lights</string>
-    <string name="card_ringtones">Call Animation</string>
-    <string name="card_notifications">Notification Animation</string>
+    <string name="card_ringtones">Ringtone</string>
+    <string name="card_notifications">Notification Sound</string>
     <string name="master_switch_label">Glyphs Lights</string>
     <string name="tile_master_label">Glyphs</string>
     <string name="tile_light_label">Glyph Light</string>
@@ -27,7 +27,7 @@
     <string name="show_system_apps">Show system apps</string>
     <string name="search_apps">Search apps&#8230;</string>
     <string name="pref_file">Glyph Settings</string>
-    <string name="style_title">Notification Style</string>
+    <string name="style_title">Notification Sound</string>
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
     <string name="assistant_mic_visualizer_title">Assistant Mic Visualizer</string>
@@ -53,11 +53,11 @@
     <string name="shake_while_on_label">Allow while screen is on</string>
 
     <string name="exit">Exit</string>
-    <string name="import_ringtone_title">Import Animation</string>
-    <string name="import_ringtone_desc">Import a .ogg glyph pattern. For other formats, use the Converter.</string>
-    <string name="import_warning">Download custom glyph patterns at:\nhttps://glyphtones.firu.dev/</string>
+    <string name="import_ringtone_title">Import Ringtone</string>
+    <string name="import_ringtone_desc">Import a .ogg ringtone. For other formats, use the Converter.</string>
+    <string name="import_warning">Download custom ringtones at:\nhttps://glyphtones.firu.dev/</string>
     <string name="ring_notif_haptics_title">Call &amp; Notification Haptics</string>
-    <string name="ring_notif_haptics_desc">Synced haptic feedback for custom call and notification patterns</string>
+    <string name="ring_notif_haptics_desc">Synced haptic feedback for ringtones and notification sounds</string>
     <string name="features">Features</string>
     <string name="schedule">Schedule</string>
     <string name="sleep_mode">Sleep mode</string>
@@ -82,8 +82,8 @@
     <string name="day_friday">F</string>
     <string name="day_saturday">S</string>
     <string name="day_sunday">S</string>
-    <string name="delete_confirm_title">Delete Custom Pattern?</string>
-    <string name="delete_confirm_message">Are you sure you want to delete this imported pattern? This action cannot be undone.</string>
+    <string name="delete_confirm_title">Delete Custom Ringtone?</string>
+    <string name="delete_confirm_message">Are you sure you want to delete this imported ringtone? This action cannot be undone.</string>
     <string name="delete">Delete</string>
     <string name="volume_flip_only_title">Shows when screen is off</string>
     <string name="volume_flip_only_desc">Only visualize volume on LEDs when phone screen is turned off</string>
@@ -97,7 +97,7 @@
     <string name="turn_off_desc">Glyph lights will not work if the phone is unlocked</string>
     <string name="battery_glyph_label">Battery Glyph</string>
     <string name="battery_glyph_desc">Glyph brightness shows battery level while charging</string>
-    <string name="audio_mute_toggle">Mute audio for imported styles</string>
+    <string name="audio_mute_toggle">Mute audio preview</string>
     <string name="sleep_exceptions_header">EXCEPTIONS</string>
     <string name="sleep_allow_shake_title">Allow Shake to Glyph</string>
     <string name="sleep_allow_shake_desc">Shake to Glyph will remain active even during sleep mode</string>
@@ -109,7 +109,11 @@
     <string name="powershare_glyph_title">Wireless Powershare</string>
     <string name="powershare_glyph_desc">Pulse the center ring when reverse wireless charging a device</string>
     <string name="notification_cooldown_title">Animation Cooldown</string>
-    <string name="notification_cooldown_desc">Only play glyph animation once every minute for each app</string>
+    <string name="notification_cooldown_desc">Only play notification once every minute for each app</string>
     <string name="stop_during_call_title">Stop Glyphs During Call</string>
     <string name="stop_during_call_desc">Block all glyph animations while on an active call</string>
+    <string name="builtin_ringtones">Built-in Ringtones</string>
+    <string name="builtin_sounds">Built-in Sounds</string>
+    <string name="imported_ringtones">Imported Ringtones</string>
+    <string name="imported_sounds">Imported Sounds</string>
 </resources>

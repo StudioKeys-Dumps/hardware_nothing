@@ -151,7 +151,7 @@
                             android:textSize="12sp" />
 
                         <TextView
-                            android:id="@+id/tvCurrentPattern"
+                            android:id="@+id/tvCurrentRingtone"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
@@ -212,11 +212,12 @@
                         android:padding="20dp">
 
                         <TextView
+                            android:id="@+id/tvHeaderBuiltIn"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif-condensed"
-                            android:text="Built-in Patterns"
+                            android:text="@string/builtin_ringtones"
                             android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp" />
 
@@ -267,11 +268,12 @@
                         android:padding="20dp">
 
                         <TextView
+                            android:id="@+id/tvHeaderImported"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="sans-serif-condensed"
-                            android:text="Imported Patterns"
+                            android:text="@string/imported_ringtones"
                             android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp" />
 

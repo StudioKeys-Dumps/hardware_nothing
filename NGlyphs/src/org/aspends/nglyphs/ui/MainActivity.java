@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
             cardGlyphConverter, cardTorchBrightness, cardStopDuringCall, cardAssistant,
             cardMusicVisualizer, cardNotifCooldown;
 
-    private TextView textCurrentCallStyle, textCurrentNotifStyle, textCurrentFlipStyle,
+    private TextView textCurrentRingtone, textCurrentNotifSound, textCurrentFlipStyle,
             textSleepTime, textImportWarning, textCurrentMusic;
     private MaterialSwitch switchMaster, switchFlip, switchLockscreenOnly, switchSleepMode,
             switchShake, switchVolumeBar, switchVolumeFlipOnly, switchRingNotifHaptics,
@@ -221,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         GlyphManagerV2.getInstance().init(this);
         AnimationManager.init(this);
+        RingtoneSyncObserver.register(getApplicationContext());
         ViewCompat.setOnApplyWindowInsetsListener(
                 findViewById(R.id.nestedScroll), (v, windowInsets) -> {
                     Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -279,6 +280,15 @@ public class MainActivity extends AppCompatActivity {
         };
         registerReceiver(brightnessReceiver,
                 new android.content.IntentFilter("org.aspends.nglyphs.ACTION_BRIGHTNESS_UPDATED"),
+                android.content.Context.RECEIVER_NOT_EXPORTED);
+        registerReceiver(new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, android.content.Intent intent) {
+                notifStyleValues = loadStyleNames("notification");
+                callStyleValues = loadStyleNames("call");
+                updateStyleLabels();
+            }
+        }, new android.content.IntentFilter("org.aspends.nglyphs.ACTION_RINGTONE_SYNCED"),
                 android.content.Context.RECEIVER_NOT_EXPORTED);
 
         // UI Refresh Loop for Sleep Mode transitions
@@ -355,8 +365,8 @@ public class MainActivity extends AppCompatActivity {
         layoutGlyphProgressBrightness = findViewById(R.id.layoutGlyphProgressBrightness);
         sliderProgressBrightness = findViewById(R.id.sliderProgressBrightness);
 
-        textCurrentCallStyle = findViewById(R.id.textCurrentCallStyle);
-        textCurrentNotifStyle = findViewById(R.id.textCurrentNotifStyle);
+        textCurrentRingtone = findViewById(R.id.textCurrentRingtone);
+        textCurrentNotifSound = findViewById(R.id.textCurrentNotifSound);
         textCurrentFlipStyle = findViewById(R.id.textCurrentFlipStyle);
         textSleepTime = findViewById(R.id.textSleepTime);
         textCurrentMusic = findViewById(R.id.textCurrentMusic);
@@ -883,18 +893,18 @@ public class MainActivity extends AppCompatActivity {
         List<java.io.File> customs = CustomRingtoneManager.getImportedRingtones(this);
 
         if (notifStyleValues != null && nIdx < notifStyleValues.length) {
-            textCurrentNotifStyle.setText(
+            textCurrentNotifSound.setText(
                     CustomRingtoneManager.cleanStyleName(notifStyleValues[nIdx]));
         } else if (notifStyleValues != null && nIdx - notifStyleValues.length < customs.size()) {
-            textCurrentNotifStyle.setText(CustomRingtoneManager.cleanStyleName(
+            textCurrentNotifSound.setText(CustomRingtoneManager.cleanStyleName(
                     customs.get(nIdx - notifStyleValues.length).getName()));
         }
 
         if (callStyleValues != null && cIdx < callStyleValues.length) {
-            textCurrentCallStyle.setText(
+            textCurrentRingtone.setText(
                     CustomRingtoneManager.cleanStyleName(callStyleValues[cIdx]));
         } else if (callStyleValues != null && cIdx - callStyleValues.length < customs.size()) {
-            textCurrentCallStyle.setText(CustomRingtoneManager.cleanStyleName(
+            textCurrentRingtone.setText(CustomRingtoneManager.cleanStyleName(
                     customs.get(cIdx - callStyleValues.length).getName()));
         }
 
