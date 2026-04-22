@@ -131,9 +131,7 @@ public class AudioVisualizerService extends Service {
             magnitudes[i] = Math.sqrt(re * re + im * im);
         }
 
-        int currentVol = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        int maxVol = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        float volScale = maxVol > 0 ? (float) currentVol / maxVol : 0;
+        float volScale = currentVolumeScale();
 
         int[] freqBoundaries =
                 visualizerMode == MODE_15ZONE ? FREQ_BOUNDARIES_15 : FREQ_BOUNDARIES_5;
@@ -163,20 +161,38 @@ public class AudioVisualizerService extends Service {
                 smoothed[z] *= DECAY;
             }
 
-            zoneIntensities[z] = (int) (smoothed[z] * volScale * GlyphManagerV2.MAX_BRIGHTNESS);
+            zoneIntensities[z] = (int) (smoothed[z] * volScale * effectiveBrightness());
             prevBin = endBin;
         }
 
         AnimationManager.showVisualizer(zoneIntensities, this);
     }
 
+    // Use STREAM_RING during ringtone previews so the ring slider drives glyph level.
+    private float currentVolumeScale() {
+        int stream = sRingtonePreviewActive ? AudioManager.STREAM_RING
+                                            : AudioManager.STREAM_MUSIC;
+        int currentVol = mAudioManager.getStreamVolume(stream);
+        int maxVol = mAudioManager.getStreamMaxVolume(stream);
+        return maxVol > 0 ? (float) currentVol / maxVol : 0f;
+    }
+
+    private int effectiveBrightness() {
+        if (!sRingtonePreviewActive) {
+            return GlyphManagerV2.MAX_BRIGHTNESS;
+        }
+        int pref = mPrefs != null ? mPrefs.getInt("brightness", GlyphManagerV2.MAX_BRIGHTNESS)
+                                  : GlyphManagerV2.MAX_BRIGHTNESS;
+        if (pref < 0) pref = 0;
+        if (pref > GlyphManagerV2.MAX_BRIGHTNESS) pref = GlyphManagerV2.MAX_BRIGHTNESS;
+        return pref;
+    }
+
     private void processBeatFFT(byte[] fft) {
         double captureSize = mVisualizer.getCaptureSize() / 2.0;
         int sampleRate = mVisualizer.getSamplingRate() / 2000;
 
-        int currentVol = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        int maxVol = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        float volScale = maxVol > 0 ? (float) currentVol / maxVol : 0;
+        float volScale = currentVolumeScale();
 
         int[] bandLimits = {LOW_FREQUENCY, MID_LOW_FREQUENCY, MID_FREQUENCY, MID_HIGH_FREQUENCY,
                 HIGH_FREQUENCY};
@@ -214,7 +230,7 @@ public class AudioVisualizerService extends Service {
             } else {
                 beatDecay[i] *= BEAT_DECAY_RATE;
             }
-            zoneIntensities[i] = (int) (beatDecay[i] * volScale * GlyphManagerV2.MAX_BRIGHTNESS);
+            zoneIntensities[i] = (int) (beatDecay[i] * volScale * effectiveBrightness());
         }
 
         long currentTime = System.currentTimeMillis();
