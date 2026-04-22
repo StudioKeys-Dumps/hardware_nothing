@@ -6,6 +6,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.AudioPlaybackConfiguration;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Handler;
@@ -13,6 +16,7 @@ import android.os.Looper;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import java.util.List;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -51,6 +55,9 @@ public final class RingtoneSyncObserver {
     private static final AtomicBoolean sSelfUpdatingNotification = new AtomicBoolean(false);
 
     private static boolean sRegistered = false;
+
+    private static AudioManager.AudioPlaybackCallback sPlaybackCallback;
+    private static boolean sPreviewActive = false;
 
     // -------------------------------------------------------------------------
     // Stock tone maps  (lowercase key → exact CSV base name without extension)
@@ -181,6 +188,71 @@ public final class RingtoneSyncObserver {
                 });
 
         Log.i(TAG, "ContentObservers registered for ringtone and notification sound.");
+
+        registerPlaybackWatcher(appContext, handler);
+    }
+
+    /**
+     * Watch system-wide audio playback configs and react when any other app
+     * plays ringtone / notification audio (e.g. the SoundPicker preview).
+     * Soundpicker does not touch Settings.System until the user confirms,
+     * so the ContentObserver alone cannot cover the preview step.
+     */
+    private static void registerPlaybackWatcher(Context appContext, Handler handler) {
+        if (sPlaybackCallback != null) return;
+
+        AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) return;
+
+        int ownUid = android.os.Process.myUid();
+
+        sPlaybackCallback = new AudioManager.AudioPlaybackCallback() {
+            @Override
+            public void onPlaybackConfigChanged(List<AudioPlaybackConfiguration> configs) {
+                boolean preview = false;
+                if (configs != null) {
+                    for (AudioPlaybackConfiguration c : configs) {
+                        AudioAttributes attr = c.getAudioAttributes();
+                        if (attr == null) continue;
+                        int usage = attr.getUsage();
+                        if (usage != AudioAttributes.USAGE_NOTIFICATION_RINGTONE
+                                && usage != AudioAttributes.USAGE_NOTIFICATION) {
+                            continue;
+                        }
+                        int clientUid = safeClientUid(c);
+                        if (clientUid == ownUid) {
+                            continue;
+                        }
+                        preview = true;
+                        break;
+                    }
+                }
+                Log.i(TAG, "onPlaybackConfigChanged preview=" + preview);
+                if (preview) {
+                    sPreviewActive = true;
+                    activateTemporaryVisualizer(appContext);
+                } else if (sPreviewActive) {
+                    sPreviewActive = false;
+                    stopTemporaryVisualizer(appContext);
+                }
+            }
+        };
+        am.registerAudioPlaybackCallback(sPlaybackCallback, handler);
+        Log.i(TAG, "AudioPlaybackCallback registered for ringtone preview detection.");
+    }
+
+    /**
+     * AudioPlaybackConfiguration.getClientUid is @SystemApi; fall back to
+     * reflection when the linker cannot resolve it directly.
+     */
+    private static int safeClientUid(AudioPlaybackConfiguration c) {
+        try {
+            return (int) AudioPlaybackConfiguration.class
+                    .getMethod("getClientUid")
+                    .invoke(c);
+        } catch (Throwable t) {
+            return -1;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -232,6 +304,43 @@ public final class RingtoneSyncObserver {
 
     private static final Handler sVisualizerHandler = new Handler(Looper.getMainLooper());
     private static Runnable sVisualizerStopRunnable;
+    private static Runnable sGlyphPreviewStopRunnable;
+    private static final long GLYPH_PREVIEW_RING_MS = 10_000L;
+    private static final long GLYPH_PREVIEW_NOTIF_MS = 3_000L;
+
+    /** Play the just-generated glyph timeline on the lights (no audio). */
+    private static void playGlyphPreview(Context context, String oggName, int toneType) {
+        sVisualizerHandler.post(() -> {
+            try {
+                SharedPreferences prefs = context.getSharedPreferences(
+                        context.getString(R.string.pref_file), Context.MODE_PRIVATE);
+                int brightness = prefs.getInt("brightness", 2048);
+                android.os.Vibrator v =
+                        (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                int streamType = (toneType == RingtoneManager.TYPE_RINGTONE)
+                        ? android.media.AudioManager.STREAM_RING
+                        : android.media.AudioManager.STREAM_NOTIFICATION;
+
+                org.aspends.nglyphs.core.GlyphEffects.run(
+                        oggName, brightness, v, context, streamType, false);
+
+                if (sGlyphPreviewStopRunnable != null) {
+                    sVisualizerHandler.removeCallbacks(sGlyphPreviewStopRunnable);
+                }
+                long timeout = (toneType == RingtoneManager.TYPE_RINGTONE)
+                        ? GLYPH_PREVIEW_RING_MS
+                        : GLYPH_PREVIEW_NOTIF_MS;
+                sGlyphPreviewStopRunnable = () -> {
+                    try {
+                        org.aspends.nglyphs.core.GlyphEffects.stopCustomRingtone();
+                    } catch (Exception ignored) {}
+                };
+                sVisualizerHandler.postDelayed(sGlyphPreviewStopRunnable, timeout);
+            } catch (Exception e) {
+                Log.w(TAG, "playGlyphPreview failed", e);
+            }
+        });
+    }
 
     /**
      * Temporarily start the AudioVisualizerService so glyphs react to ringtone
@@ -265,6 +374,25 @@ public final class RingtoneSyncObserver {
         };
         sVisualizerHandler.postDelayed(sVisualizerStopRunnable, 30_000L);
         Log.i(TAG, "Temporary visualizer activated for ringtone preview");
+    }
+
+    /** Tear the temporary visualizer down immediately. */
+    private static void stopTemporaryVisualizer(Context context) {
+        if (sVisualizerStopRunnable != null) {
+            sVisualizerHandler.removeCallbacks(sVisualizerStopRunnable);
+            sVisualizerStopRunnable = null;
+        }
+        AudioVisualizerService.setRingtonePreviewActive(false);
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(
+                    context.getString(R.string.pref_file), Context.MODE_PRIVATE);
+            if (!prefs.getBoolean("music_visualizer_enabled", false)) {
+                context.stopService(new Intent(context, AudioVisualizerService.class));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "stopTemporaryVisualizer failed", e);
+        }
+        Log.i(TAG, "Temporary visualizer stopped (preview ended)");
     }
 
     private static void handleToneChanged(Context context, int toneType) {
@@ -318,6 +446,38 @@ public final class RingtoneSyncObserver {
 
         Log.i(TAG, "Synced stock tone: " + csvName + " at index " + idx);
         broadcastSynced(context, toneType);
+        playStockGlyphPreview(context, assetFolder, csvName, toneType);
+    }
+
+    /** Light a stock CSV pattern on the glyphs for a brief preview. */
+    private static void playStockGlyphPreview(
+            Context context, String assetFolder, String csvName, int toneType) {
+        sVisualizerHandler.post(() -> {
+            try {
+                SharedPreferences prefs = context.getSharedPreferences(
+                        context.getString(R.string.pref_file), Context.MODE_PRIVATE);
+                int brightness = prefs.getInt("brightness", 2048);
+                android.os.Vibrator v =
+                        (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                org.aspends.nglyphs.core.GlyphEffects.play(
+                        context, assetFolder, csvName, v, brightness);
+
+                if (sGlyphPreviewStopRunnable != null) {
+                    sVisualizerHandler.removeCallbacks(sGlyphPreviewStopRunnable);
+                }
+                long timeout = (toneType == RingtoneManager.TYPE_RINGTONE)
+                        ? GLYPH_PREVIEW_RING_MS
+                        : GLYPH_PREVIEW_NOTIF_MS;
+                sGlyphPreviewStopRunnable = () -> {
+                    try {
+                        org.aspends.nglyphs.core.GlyphEffects.stopCustomRingtone();
+                    } catch (Exception ignored) {}
+                };
+                sVisualizerHandler.postDelayed(sGlyphPreviewStopRunnable, timeout);
+            } catch (Exception e) {
+                Log.w(TAG, "playStockGlyphPreview failed", e);
+            }
+        });
     }
 
     /**
@@ -402,28 +562,32 @@ public final class RingtoneSyncObserver {
                     return;
                 }
 
-                // 5. Copy CSV to custom_ringtones/
-                String destCsvName = sanitizeFileName(baseName) + ".csv";
+                // 5. Persist both OGG and CSV so GlyphEffects can resolve the style
+                //    via CustomRingtoneManager.getCustomRingtoneFile (filters by .ogg).
+                String safeBase = sanitizeFileName(baseName);
+                String destOggName = safeBase + ".ogg";
+                String destCsvName = safeBase + ".csv";
                 File destDir = new File(context.getFilesDir(), CUSTOM_RINGTONES_DIR);
                 if (!destDir.exists()) {
                     destDir.mkdirs();
                 }
+                File destOgg = new File(destDir, destOggName);
                 File destCsv = new File(destDir, destCsvName);
+                copyFile(tempOutput, destOgg);
                 copyFile(generatedCsv, destCsv);
 
-                // 6. Determine index for the custom file in the imported list
-                // Custom imports follow built-in stock entries; index is used as an offset
-                // by StyleSelectionActivity. We don't know the offset here, so we save
-                // only the value key. The UI rebuilds the index on next open.
                 SharedPreferences prefs =
                         context.getSharedPreferences(context.getString(R.string.pref_file),
                                 Context.MODE_PRIVATE);
-                prefs.edit().putString(valKey, destCsvName).apply();
+                prefs.edit().putString(valKey, destOggName).apply();
 
-                Log.i(TAG, "Custom tone encoded and saved as: " + destCsvName);
+                Log.i(TAG, "Custom tone encoded and saved as: " + destOggName);
                 broadcastSynced(context, toneType);
 
-                // Cleanup temp files
+                // 6. Light the freshly generated pattern so the user can see it
+                //    (Settings already plays the audio).
+                playGlyphPreview(context, destOggName, toneType);
+
                 cleanupFile(tempInput);
                 cleanupFile(tempOutput);
                 cleanupFile(generatedCsv);
