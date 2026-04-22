@@ -58,6 +58,7 @@ public class GlyphTileService extends TileService {
         SharedPreferences prefs = getSharedPreferences(getString(R.string.pref_file), MODE_PRIVATE);
         boolean masterAllow = prefs.getBoolean("master_allow", false);
         boolean isLightOn = prefs.getBoolean("is_light_on", false);
+        int brightness = prefs.getInt("torch_brightness", 2048);
         Tile tile = getQsTile();
 
         if (tile != null) {
@@ -65,8 +66,14 @@ public class GlyphTileService extends TileService {
             if (!masterAllow) {
                 tile.setState(Tile.STATE_UNAVAILABLE);
                 tile.setSubtitle(getString(R.string.master_off_subtitle));
+            } else if (isLightOn) {
+                tile.setState(Tile.STATE_ACTIVE);
+                int percent = Math.round((brightness / 4095f) * 100f);
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                tile.setSubtitle(percent + "%");
             } else {
-                tile.setState(isLightOn ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
+                tile.setState(Tile.STATE_INACTIVE);
                 tile.setSubtitle(null);
             }
             tile.updateTile();

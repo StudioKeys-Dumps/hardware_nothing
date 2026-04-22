@@ -51,6 +51,27 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <style name="ThemeOverlay.GlyphDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.GlyphDialog.Button.Filled</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.GlyphDialog.Button.Pill</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.GlyphDialog.Button.Pill</item>
+    </style>
+
+    <style name="Widget.GlyphDialog.Button.Filled" parent="Widget.Material3.Button.TonalButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.GlyphDialog.Pill</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.GlyphDialog.Button.Pill" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.GlyphDialog.Pill</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="ShapeAppearance.GlyphDialog.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
     <style name="TextAppearance.CollapsingHeader" parent="TextAppearance.AppCompat.Display1">
         <item name="android:fontFamily">sans-serif-condensed</item>
         <item name="android:textSize">40sp</item>
