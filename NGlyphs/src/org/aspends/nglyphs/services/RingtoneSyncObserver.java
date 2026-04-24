@@ -46,7 +46,7 @@ public final class RingtoneSyncObserver {
     /** Extra key indicating which tone type was synced (RingtoneManager.TYPE_*). */
     public static final String EXTRA_TONE_TYPE = "tone_type";
 
-    private static final long DEBOUNCE_MS = 500L;
+    private static final long DEBOUNCE_MS = 150L;
     private static final String CUSTOM_RINGTONES_DIR = "custom_ringtones";
 
     // Loop guards — set these before any programmatic ringtone change so the observer

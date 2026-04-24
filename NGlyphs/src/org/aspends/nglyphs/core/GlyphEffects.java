@@ -1256,6 +1256,9 @@ public class GlyphEffects {
                 int torchBrightness = prefs.getInt("torch_brightness", 2048);
                 int torchVal = isLightOn ? torchBrightness : 0;
 
+                final double FRAME_MS = 16.666;
+                final long startTime = android.os.SystemClock.elapsedRealtime();
+                long frameIdx = 0;
                 boolean vibratedThisCycle = false;
                 String line;
                 while ((line = reader.readLine()) != null
@@ -1291,11 +1294,21 @@ public class GlyphEffects {
                     } catch (NumberFormatException ignored) {
                     }
 
-                    try {
-                        Thread.sleep(FRAME_DURATION);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        break;
+                    frameIdx++;
+                    long expectedTime = startTime + (long) (frameIdx * FRAME_MS);
+                    long sleepTime = expectedTime - android.os.SystemClock.elapsedRealtime();
+                    if (sleepTime > 0) {
+                        try {
+                            Thread.sleep(sleepTime);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    } else if (sleepTime < -33) {
+                        long skip = (long) (Math.abs(sleepTime) / FRAME_MS);
+                        for (long s = 0; s < skip && reader.readLine() != null; s++) {
+                            frameIdx++;
+                        }
                     }
                 }
             } catch (Exception ignored) {
