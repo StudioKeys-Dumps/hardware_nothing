@@ -56,7 +56,11 @@ public class MasterTileService extends TileService {
             GlyphManagerV2.getInstance().toggleAll(false);
         }
 
-        TileService.requestListeningState(this, new ComponentName(this, GlyphTileService.class));
+        try {
+            TileService.requestListeningState(
+                    this, new ComponentName(this, GlyphTileService.class));
+        } catch (NullPointerException | SecurityException ignored) {
+        }
         syncTile();
     }
 
