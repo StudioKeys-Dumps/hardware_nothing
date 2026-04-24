@@ -22,18 +22,18 @@ public class BootCompletedReceiver extends BroadcastReceiver {
             Log.i(TAG, "Starting Glyph services after boot: " + action);
             RingtoneSyncObserver.register(context.getApplicationContext());
 
-            try {
-                context.startService(new Intent(context, CameraRecordingService.class));
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to start CameraRecordingService", e);
-            }
-
             SharedPreferences prefs = context.getSharedPreferences(
                     context.getString(R.string.pref_file), Context.MODE_PRIVATE);
 
             if (!prefs.getBoolean("master_allow", false)) {
                 Log.d(TAG, "Master toggle is OFF, skipping service start.");
                 return;
+            }
+
+            try {
+                context.startService(new Intent(context, CameraRecordingService.class));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start CameraRecordingService", e);
             }
 
             // Start enabled services

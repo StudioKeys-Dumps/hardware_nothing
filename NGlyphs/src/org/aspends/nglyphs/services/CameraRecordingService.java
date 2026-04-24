@@ -2,7 +2,9 @@ package org.aspends.nglyphs.services;
 
 import android.app.AppOpsManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Handler;
@@ -11,14 +13,17 @@ import android.os.Looper;
 import android.telecom.TelecomManager;
 import android.util.Log;
 import androidx.annotation.Nullable;
+import org.aspends.nglyphs.R;
 import org.aspends.nglyphs.core.GlyphManagerV2;
 
 public class CameraRecordingService extends Service {
     private static final String TAG = "CameraRecordingService";
+    private static final String PREF_MASTER_ALLOW = "master_allow";
 
     private AppOpsManager appOps;
     private TelecomManager telecomManager;
     private AudioManager audioManager;
+    private SharedPreferences prefs;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private volatile boolean isRecordingLedOn = false;
     private volatile String cameraPackage = null;
@@ -36,12 +41,21 @@ public class CameraRecordingService extends Service {
                 handler.post(this::evaluateRecordingState);
             };
 
+    private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener =
+            (sp, key) -> {
+                if (PREF_MASTER_ALLOW.equals(key)) {
+                    handler.post(this::evaluateRecordingState);
+                }
+            };
+
     @Override
     public void onCreate() {
         super.onCreate();
         appOps = getSystemService(AppOpsManager.class);
         telecomManager = getSystemService(TelecomManager.class);
         audioManager = getSystemService(AudioManager.class);
+        prefs = getSharedPreferences(getString(R.string.pref_file), Context.MODE_PRIVATE);
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener);
     }
 
     @Override
@@ -56,7 +70,9 @@ public class CameraRecordingService extends Service {
     }
 
     private void evaluateRecordingState() {
-        boolean isRecording = cameraPackage != null
+        boolean masterAllowed = prefs.getBoolean(PREF_MASTER_ALLOW, false);
+        boolean isRecording = masterAllowed
+                && cameraPackage != null
                 && micPackage != null
                 && cameraPackage.equals(micPackage)
                 && !isCallActive()
@@ -125,6 +141,9 @@ public class CameraRecordingService extends Service {
         handler.removeCallbacksAndMessages(null);
         appOps.stopWatchingActive(cameraListener);
         appOps.stopWatchingActive(micListener);
+        if (prefs != null) {
+            prefs.unregisterOnSharedPreferenceChangeListener(prefsListener);
+        }
         if (isRecordingLedOn) {
             isRecordingLedOn = false;
             GlyphManagerV2.getInstance().setNativeEffect(
