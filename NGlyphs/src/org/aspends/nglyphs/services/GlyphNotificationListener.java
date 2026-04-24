@@ -49,6 +49,8 @@ public class GlyphNotificationListener
             new ConcurrentHashMap<>();
     private BroadcastReceiver unlockReceiver;
     private SharedPreferences prefs;
+    private Runnable pendingScreenOffUpdate;
+    private android.app.KeyguardManager.KeyguardLockedStateListener keyguardListener;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable heartbeatRunnable = this::runEssentialHeartbeat;
@@ -134,16 +136,32 @@ public class GlyphNotificationListener
         unlockReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (Intent.ACTION_USER_PRESENT.equals(intent.getAction())) {
+                String action = intent.getAction();
+                if (Intent.ACTION_USER_PRESENT.equals(action)
+                        || "android.intent.action.USER_UNLOCKED".equals(action)) {
                     lastMovementTime =
                             SystemClock.elapsedRealtime(); // Reset idle timer for battery saver
+                    if (pendingScreenOffUpdate != null) {
+                        handler.removeCallbacks(pendingScreenOffUpdate);
+                        pendingScreenOffUpdate = null;
+                    }
+                    refreshLocalActiveEssentials();
                     if (prefs.getBoolean("essential_lights_unlock", false)) {
                         performIgnoreLogic();
                     }
-                    updateEssentialLightState(); // Immediate update
-                    handler.postDelayed(() -> updateEssentialLightState(), 300);
-                } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                    updateEssentialLightState();
+                    handler.postDelayed(() -> updateEssentialLightState(), 400);
                     handler.postDelayed(() -> updateEssentialLightState(), 1000);
+                    handler.postDelayed(() -> updateEssentialLightState(), 2000);
+                } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                    if (pendingScreenOffUpdate != null) {
+                        handler.removeCallbacks(pendingScreenOffUpdate);
+                    }
+                    pendingScreenOffUpdate = () -> {
+                        pendingScreenOffUpdate = null;
+                        updateEssentialLightState();
+                    };
+                    handler.postDelayed(pendingScreenOffUpdate, 1000);
                     startHeartbeat();
                 } else if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
                     stopHeartbeat();
@@ -161,6 +179,7 @@ public class GlyphNotificationListener
         };
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction("android.intent.action.USER_UNLOCKED");
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(FlipToGlyphService.ACTION_REFRESH_ESSENTIAL);
@@ -169,6 +188,24 @@ public class GlyphNotificationListener
             registerReceiver(unlockReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
             registerReceiver(unlockReceiver, filter);
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            android.app.KeyguardManager km =
+                    (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (km != null) {
+                keyguardListener = locked -> {
+                    if (!locked) {
+                        refreshLocalActiveEssentials();
+                        updateEssentialLightState();
+                    }
+                };
+                try {
+                    km.addKeyguardLockedStateListener(handler::post, keyguardListener);
+                } catch (Exception e) {
+                    keyguardListener = null;
+                }
+            }
         }
 
         mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
@@ -193,12 +230,43 @@ public class GlyphNotificationListener
         unregisterSensor();
         if (unlockReceiver != null)
             unregisterReceiver(unlockReceiver);
+        if (keyguardListener != null) {
+            android.app.KeyguardManager km =
+                    (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (km != null) {
+                try {
+                    km.removeKeyguardLockedStateListener(keyguardListener);
+                } catch (Exception ignored) {
+                }
+            }
+            keyguardListener = null;
+        }
         if (mediaSessionManager != null)
             mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsListener);
         clearMediaCallbacks();
         handler.removeCallbacksAndMessages(null);
         if (instance == this)
             instance = null;
+    }
+
+    private void refreshLocalActiveEssentials() {
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            localActiveEssentials.clear();
+            if (active != null) {
+                for (StatusBarNotification sbn : active) {
+                    localActiveEssentials.put(sbn.getKey(), sbn);
+                }
+            }
+            trimIgnoredEssentialKeys();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private synchronized void trimIgnoredEssentialKeys() {
+        if (ignoredEssentialKeys.isEmpty()) return;
+        boolean changed = ignoredEssentialKeys.retainAll(localActiveEssentials.keySet());
+        if (changed) saveIgnoredKeys();
     }
 
     @Override
@@ -795,8 +863,14 @@ public class GlyphNotificationListener
         } catch (Exception e) {
         }
 
-        // Block all Essential lights if user is on an active call and setting is
-        // enabled
+        if (prefs.getBoolean("is_on_call", false)) {
+            android.telephony.TelephonyManager tm = (android.telephony.TelephonyManager)
+                    getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm != null
+                    && tm.getCallState() == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+                prefs.edit().putBoolean("is_on_call", false).apply();
+            }
+        }
         if (prefs.getBoolean("is_on_call", false)
                 && prefs.getBoolean("stop_glyphs_during_call", false)) {
             hasActiveEssential = false;
