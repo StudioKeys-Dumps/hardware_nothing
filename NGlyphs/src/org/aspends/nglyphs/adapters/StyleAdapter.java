@@ -144,6 +144,13 @@ public class StyleAdapter extends RecyclerView.Adapter<StyleAdapter.ViewHolder> 
                 } catch (Exception ignored) {}
                 currentPreviewPlayer = null;
             }
+            // Also tear down any in-flight GlyphEffects.previewPlayer (custom
+            // ringtone audio kept alive by the "notifications cannot interrupt
+            // a ringtone" guard in GlyphEffects.play). User-initiated taps
+            // must always replace the prior preview.
+            try {
+                GlyphEffects.stopCustomRingtone();
+            } catch (Exception ignored) {}
 
             // Preview must live under external cache (media_rw_data_file) so that
             // mediaserver can read it — internal cache carries per-app MLS
