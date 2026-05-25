@@ -1,6 +1,8 @@
 package org.aspends.nglyphs.receivers;
 
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -20,6 +22,7 @@ public class BootCompletedReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
             Log.i(TAG, "Starting Glyph services after boot: " + action);
+            grantNotificationListener(context);
             RingtoneSyncObserver.register(context.getApplicationContext());
 
             SharedPreferences prefs = context.getSharedPreferences(
@@ -68,6 +71,28 @@ public class BootCompletedReceiver extends BroadcastReceiver {
             } catch (Exception e) {
                 Log.e(TAG, "Failed to start " + serviceClass.getSimpleName(), e);
             }
+        }
+    }
+
+    /**
+     * Grants notification listener access to the GlyphNotificationListener service
+     * via the authoritative NotificationManager API. Requires the platform-protected
+     * MANAGE_NOTIFICATION_LISTENERS permission (declared and whitelisted for this
+     * privapp). Writing Settings.Secure.enabled_notification_listeners directly is
+     * not sufficient on Android 14+.
+     */
+    public static void grantNotificationListener(Context context) {
+        try {
+            ComponentName component =
+                    new ComponentName(context, GlyphNotificationListener.class);
+            NotificationManager nm = context.getSystemService(NotificationManager.class);
+            if (nm == null) return;
+            if (nm.isNotificationListenerAccessGranted(component)) return;
+            nm.setNotificationListenerAccessGranted(component, true);
+            Log.i(TAG, "Granted notification listener access for "
+                    + component.flattenToShortString());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to grant notification listener access", e);
         }
     }
 }

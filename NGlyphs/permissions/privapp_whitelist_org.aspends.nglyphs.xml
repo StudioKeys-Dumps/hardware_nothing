@@ -4,6 +4,7 @@
         <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
         <permission name="android.permission.MODIFY_AUDIO_SETTINGS"/>
         <permission name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+        <permission name="android.permission.MANAGE_NOTIFICATION_LISTENERS"/>
         <permission name="android.permission.READ_PHONE_STATE"/>
         <permission name="android.permission.RECORD_AUDIO"/>
         <permission name="android.permission.FOREGROUND_SERVICE"/>

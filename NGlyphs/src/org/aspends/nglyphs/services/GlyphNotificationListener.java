@@ -335,6 +335,11 @@ public class GlyphNotificationListener
             return;
         }
 
+        // The persistent essential light is meant to surface notifications the user
+        // hasn't seen yet. When the device is already in their hand and unlocked,
+        // mark essential notifications as implicitly seen so the essential light
+        // doesn't pile up on next lock. The blink path below is gated by the
+        // user-facing screen_off_only preference, not by lock state.
         android.app.KeyguardManager km =
                 (android.app.KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         android.os.PowerManager pm =
@@ -342,12 +347,9 @@ public class GlyphNotificationListener
         boolean isDeviceUnlocked =
                 pm != null && pm.isInteractive() && km != null && !km.isKeyguardLocked();
 
-        if (isDeviceUnlocked) {
-            if (isEssentialApp) {
-                ignoredEssentialKeys.add(sbn.getKey());
-                saveIgnoredKeys();
-            }
-            return;
+        if (isDeviceUnlocked && isEssentialApp) {
+            ignoredEssentialKeys.add(sbn.getKey());
+            saveIgnoredKeys();
         }
 
         if (n != null) {
