@@ -16,19 +16,15 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import java.util.Calendar;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.aspends.nglyphs.R;
 import org.aspends.nglyphs.core.AnimationManager;
 import org.aspends.nglyphs.core.GlyphEffects;
 import org.aspends.nglyphs.core.GlyphManagerV2;
-import org.aspends.nglyphs.util.CustomRingtoneManager;
 import org.aspends.nglyphs.util.SleepGuard;
 
 public class FlipToGlyphService extends Service implements SensorEventListener {
@@ -40,6 +36,8 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     public static final String ACTION_REFRESH_ESSENTIAL =
             "org.aspends.nglyphs.ACTION_REFRESH_ESSENTIAL";
 
+    private static final long CALL_AUDIO_ONSET_TIMEOUT_MS = 1500L;
+
     private SensorManager sensorManager;
     private AudioManager audioManager;
     private Vibrator vibrator;
@@ -47,6 +45,7 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     private PowerManager.WakeLock wakeLock;
 
     private volatile boolean isFaceDown, isProximityCovered, isActive, isRinging;
+    private volatile boolean callEffectLaunched;
     public static volatile boolean ringingActive = false;
     public static volatile long ringingStartTime = 0;
     private int originalRingerMode;
@@ -54,7 +53,8 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable activationRunnable;
     private Runnable deactivationRunnable;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private Runnable callFallbackRunnable;
+    private AudioManager.AudioPlaybackCallback callPlaybackCallback;
 
     /**
      * Called when the service is first created.
@@ -125,35 +125,23 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     private void triggerEffect(String prefKey, int streamType) {
         if (SleepGuard.isBlocked(prefs))
             return;
-        executor.execute(() -> {
-            String fallback = "flip_style_value".equals(prefKey) ? "native_flip" : "static";
-            String style = prefs.getString(prefKey, fallback);
+        String fallback = "flip_style_value".equals(prefKey) ? "native_flip" : "static";
+        String style = prefs.getString(prefKey, fallback);
+        int brightness = prefs.getInt("brightness", 2048);
 
-            boolean isLegacyOrNative = style.startsWith("native_") || isLegacyStyle(style);
-            java.io.File customOgg = CustomRingtoneManager.getCustomRingtoneFile(this, style);
+        if (isCustomOggStyle(style)) {
+            GlyphEffects.run(style, brightness, vibrator, this, streamType, true);
+        } else if (style.startsWith("native_") || isLegacyStyle(style)) {
+            GlyphEffects.run(style, brightness, vibrator, this, streamType, true);
+            sendBroadcast(new Intent(ACTION_REFRESH_ESSENTIAL).setPackage(getPackageName()));
+        } else {
+            GlyphEffects.play(this, "notification", style, vibrator, brightness);
+            sendBroadcast(new Intent(ACTION_REFRESH_ESSENTIAL).setPackage(getPackageName()));
+        }
+    }
 
-            if (customOgg != null || isLegacyOrNative) {
-                // GlyphEffects.run() internally checks for customOgg first, then legacy
-                // switches
-                GlyphEffects.run(
-                        style, prefs.getInt("brightness", 2048), vibrator, this, streamType, true);
-                if (customOgg == null) {
-                    // run() does not broadcast when running legacy switches (though it should now
-                    // for native).
-                    // Safest to send here, wait, native sends it internally. Legacy run() does not.
-                    // But actually wait, we already added broadcast to native_ and run() finally
-                    // blocks in GlyphEffects.
-                    // We can just keep sendBroadcast here for legacy ones to be safe.
-                    sendBroadcast(
-                            new Intent(ACTION_REFRESH_ESSENTIAL).setPackage(getPackageName()));
-                }
-            } else {
-                // It's a built-in CSV pattern from assets/notification
-                GlyphEffects.play(
-                        this, "notification", style, vibrator, prefs.getInt("brightness", 2048));
-                sendBroadcast(new Intent(ACTION_REFRESH_ESSENTIAL).setPackage(getPackageName()));
-            }
-        });
+    private static boolean isCustomOggStyle(String style) {
+        return style != null && style.toLowerCase(java.util.Locale.ROOT).endsWith(".ogg");
     }
 
     private boolean isLegacyStyle(String style) {
@@ -170,7 +158,11 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     }
 
     /**
-     * Starts a continuous blinking visual effect for an incoming call.
+     * Arms call-glyph dispatch. The effect is launched when the telephony
+     * ringtone actually starts playing (detected via AudioPlaybackCallback)
+     * or after {@link #CALL_AUDIO_ONSET_TIMEOUT_MS} for silent / vibrate
+     * paths where no audio plays. Anchoring to audio onset keeps the glyph
+     * timeline aligned with what the user hears.
      */
     private void startCallBlinking() {
         if (isRinging)
@@ -181,47 +173,112 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
         isRinging = true;
         ringingActive = true;
         ringingStartTime = System.currentTimeMillis();
+        callEffectLaunched = false;
 
-        // Acquire WakeLock for the duration of the call to prevent CPU sleep
         if (wakeLock != null) {
             try {
-                wakeLock.acquire(60000); // 1 minute max for safety
-            } catch (Exception e) {
+                wakeLock.acquire(60_000);
+            } catch (Exception ignored) {
             }
         }
 
-        executor.execute(() -> {
-            String style = prefs.getString("call_style_value", "static");
-            int callStream = isActive ? -1 : android.media.AudioManager.STREAM_RING;
-
-            // Watchdog Loop: ensures the effect keeps running until isRinging is false
-            while (isRinging) {
-                if (!GlyphEffects.isActive()) {
-                    java.io.File customOgg =
-                            CustomRingtoneManager.getCustomRingtoneFile(this, style);
-                    boolean isLegacyOrNative = style.startsWith("native_") || isLegacyStyle(style);
-
-                    if (customOgg != null || isLegacyOrNative) {
-                        GlyphEffects.run(style, prefs.getInt("brightness", 2048), vibrator, this,
-                                callStream);
-                    } else {
-                        GlyphEffects.play(
-                                this, "call", style, vibrator, prefs.getInt("brightness", 2048));
+        if (audioManager != null) {
+            callPlaybackCallback = new AudioManager.AudioPlaybackCallback() {
+                @Override
+                public void onPlaybackConfigChanged(
+                        java.util.List<android.media.AudioPlaybackConfiguration> configs) {
+                    if (!isRinging || callEffectLaunched || configs == null)
+                        return;
+                    int ownUid = android.os.Process.myUid();
+                    for (android.media.AudioPlaybackConfiguration c : configs) {
+                        android.media.AudioAttributes attr = c.getAudioAttributes();
+                        if (attr == null)
+                            continue;
+                        if (attr.getUsage()
+                                != android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            continue;
+                        if (callClientUid(c) == ownUid)
+                            continue;
+                        int latencyMs = ringtoneHalLatencyMs();
+                        if (latencyMs > 0) {
+                            handler.postDelayed(
+                                    FlipToGlyphService.this::launchCallEffect, latencyMs);
+                        } else {
+                            launchCallEffect();
+                        }
+                        return;
                     }
                 }
-
-                // Sleep between watchdog checks
-                SystemClock.sleep(style.startsWith("native_") ? 5000 : 500);
+            };
+            try {
+                audioManager.registerAudioPlaybackCallback(callPlaybackCallback, handler);
+            } catch (Exception ignored) {
+                callPlaybackCallback = null;
             }
+        }
 
-            if (wakeLock != null && wakeLock.isHeld()) {
-                try {
-                    wakeLock.release();
-                } catch (Exception e) {
+        callFallbackRunnable = this::launchCallEffect;
+        handler.postDelayed(callFallbackRunnable, CALL_AUDIO_ONSET_TIMEOUT_MS);
+    }
+
+    private void launchCallEffect() {
+        if (callEffectLaunched || !isRinging)
+            return;
+        callEffectLaunched = true;
+        if (callFallbackRunnable != null) {
+            handler.removeCallbacks(callFallbackRunnable);
+        }
+        String style = prefs.getString("call_style_value", "static");
+        int callStream = isActive ? -1 : android.media.AudioManager.STREAM_RING;
+        int brightness = prefs.getInt("brightness", 2048);
+        if (isCustomOggStyle(style) || style.startsWith("native_") || isLegacyStyle(style)) {
+            GlyphEffects.run(style, brightness, vibrator, this, callStream);
+        } else {
+            GlyphEffects.play(this, "call", style, vibrator, brightness, true);
+        }
+    }
+
+    /**
+     * AudioPlaybackConfiguration.getClientUid is @SystemApi; resolve via reflection.
+     */
+    private static int callClientUid(android.media.AudioPlaybackConfiguration c) {
+        try {
+            return (int) android.media.AudioPlaybackConfiguration.class.getMethod("getClientUid")
+                    .invoke(c);
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    /**
+     * Returns the HAL output latency for STREAM_RING in milliseconds. The
+     * AudioPlaybackCallback fires when AudioFlinger registers the ringtone
+     * playback config, which is some milliseconds before the audio actually
+     * reaches the speaker. Delaying the glyph launch by this amount keeps
+     * the timeline in lock-step with what the user hears.
+     *
+     * AudioManager.getOutputLatency is @UnsupportedAppUsage; reach it via
+     * reflection. Falls back to {@link #FALLBACK_HAL_LATENCY_MS} if the
+     * call fails or returns an unreasonable value.
+     */
+    private static final int FALLBACK_HAL_LATENCY_MS = 50;
+    private static final int MAX_REASONABLE_HAL_LATENCY_MS = 500;
+
+    private int ringtoneHalLatencyMs() {
+        if (audioManager == null) return FALLBACK_HAL_LATENCY_MS;
+        try {
+            java.lang.reflect.Method m =
+                    AudioManager.class.getMethod("getOutputLatency", int.class);
+            Object result = m.invoke(audioManager, AudioManager.STREAM_RING);
+            if (result instanceof Integer) {
+                int ms = (Integer) result;
+                if (ms > 0 && ms < MAX_REASONABLE_HAL_LATENCY_MS) {
+                    return ms;
                 }
             }
-            sendBroadcast(new Intent(ACTION_REFRESH_ESSENTIAL).setPackage(getPackageName()));
-        });
+        } catch (Throwable ignored) {
+        }
+        return FALLBACK_HAL_LATENCY_MS;
     }
 
     /**
@@ -230,10 +287,23 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
     private void stopCallBlinking() {
         isRinging = false;
         ringingActive = false;
+
+        if (callFallbackRunnable != null) {
+            handler.removeCallbacks(callFallbackRunnable);
+            callFallbackRunnable = null;
+        }
+        if (audioManager != null && callPlaybackCallback != null) {
+            try {
+                audioManager.unregisterAudioPlaybackCallback(callPlaybackCallback);
+            } catch (Exception ignored) {
+            }
+            callPlaybackCallback = null;
+        }
+
         if (wakeLock != null && wakeLock.isHeld()) {
             try {
                 wakeLock.release();
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
         }
         GlyphEffects.stopCustomRingtone();
@@ -437,7 +507,6 @@ public class FlipToGlyphService extends Service implements SensorEventListener {
         if (sensorManager != null)
             sensorManager.unregisterListener(this);
         handler.removeCallbacksAndMessages(null);
-        executor.shutdownNow();
         restoreTorchState();
         super.onDestroy();
     }

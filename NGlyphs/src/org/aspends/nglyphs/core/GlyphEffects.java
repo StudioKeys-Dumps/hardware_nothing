@@ -18,7 +18,6 @@ import org.aspends.nglyphs.R;
 import org.aspends.nglyphs.services.FlipToGlyphService;
 import org.aspends.nglyphs.util.CustomRingtoneManager;
 import org.aspends.nglyphs.util.OggMetadataParser;
-import org.aspends.nglyphs.util.ShellUtils;
 
 public class GlyphEffects {
     private static Future<?> activeEffectFuture;
@@ -1025,21 +1024,36 @@ public class GlyphEffects {
         return staged;
     }
 
+    private static volatile String cachedTimelineKey;
+    private static volatile String cachedTimeline;
+
+    private static String loadTimelineCached(java.io.File oggFile, java.io.File customCsv) {
+        java.io.File src = (customCsv != null && customCsv.exists()) ? customCsv : oggFile;
+        String key = src.getAbsolutePath() + ":" + src.lastModified() + ":" + src.length();
+        String hit = cachedTimeline;
+        if (hit != null && key.equals(cachedTimelineKey)) {
+            return hit;
+        }
+        String timeline = (src == customCsv)
+                ? org.aspends.nglyphs.util.CustomRingtoneManager.loadCSV(customCsv)
+                : OggMetadataParser.extractGlyphTimeline(oggFile);
+        if (timeline != null && !timeline.isEmpty()) {
+            cachedTimelineKey = key;
+            cachedTimeline = timeline;
+        }
+        return timeline;
+    }
+
     private static void executeCustomRingtone(java.io.File oggFile, int brightness,
             Vibrator vibrator, android.content.Context context, int audioStreamType, long sessionId,
             boolean forceAudio) {
         final android.content.Context finalCtx =
                 context != null ? context.getApplicationContext() : null;
         boolean isRingtone = (audioStreamType == android.media.AudioManager.STREAM_RING);
-        String timeline;
         String fileName = oggFile.getName();
         java.io.File customCsv = new java.io.File(
                 context.getFilesDir(), "custom_ringtones/" + fileName.replace(".ogg", ".csv"));
-        if (customCsv.exists()) {
-            timeline = org.aspends.nglyphs.util.CustomRingtoneManager.loadCSV(customCsv);
-        } else {
-            timeline = OggMetadataParser.extractGlyphTimeline(oggFile);
-        }
+        String timeline = loadTimelineCached(oggFile, customCsv);
         // Audio playback: ONLY during user preview (forceAudio = true)
         if (forceAudio) {
             try {
@@ -1080,16 +1094,12 @@ public class GlyphEffects {
                 });
 
                 previewPlayer.prepare();
-
-                ShellUtils.clearQueue(); // Ensure clean start
                 previewPlayer.start();
                 android.util.Log.d("GlyphEffects", "MediaPlayer started successfully.");
             } catch (Exception e) {
                 android.util.Log.e(
                         "GlyphEffects", "MediaPlayer failure for " + oggFile.getName(), e);
             }
-        } else {
-            ShellUtils.clearQueue();
         }
 
         try {
@@ -1222,6 +1232,11 @@ public class GlyphEffects {
 
     public static void play(android.content.Context context, String folder, String fileName,
             Vibrator vibrator, int brightness) {
+        play(context, folder, fileName, vibrator, brightness, false);
+    }
+
+    public static void play(android.content.Context context, String folder, String fileName,
+            Vibrator vibrator, int brightness, boolean loop) {
         if (context != null) {
             android.content.SharedPreferences prefs = context.getSharedPreferences(
                     context.getString(R.string.pref_file), android.content.Context.MODE_PRIVATE);
@@ -1247,70 +1262,78 @@ public class GlyphEffects {
 
         activeEffectFuture = effectExecutor.submit(() -> {
             AnimationManager.setHighPriorityActive(true);
-            try (java.io.InputStream is = appCtx.getAssets().open(folder + "/" + fileName + ".csv");
-                    java.io.BufferedReader reader =
-                            new java.io.BufferedReader(new java.io.InputStreamReader(is))) {
-                android.content.SharedPreferences prefs = appCtx.getSharedPreferences(
-                        appCtx.getString(R.string.pref_file), android.content.Context.MODE_PRIVATE);
-                boolean isLightOn = prefs.getBoolean("is_light_on", false);
-                int torchBrightness = prefs.getInt("torch_brightness", 2048);
-                int torchVal = isLightOn ? torchBrightness : 0;
+            try {
+                do {
+                    try (java.io.InputStream is =
+                                    appCtx.getAssets().open(folder + "/" + fileName + ".csv");
+                            java.io.BufferedReader reader = new java.io.BufferedReader(
+                                    new java.io.InputStreamReader(is))) {
+                        android.content.SharedPreferences prefs = appCtx.getSharedPreferences(
+                                appCtx.getString(R.string.pref_file),
+                                android.content.Context.MODE_PRIVATE);
+                        boolean isLightOn = prefs.getBoolean("is_light_on", false);
+                        int torchBrightness = prefs.getInt("torch_brightness", 2048);
+                        int torchVal = isLightOn ? torchBrightness : 0;
 
-                final double FRAME_MS = 16.666;
-                final long startTime = android.os.SystemClock.elapsedRealtime();
-                long frameIdx = 0;
-                boolean vibratedThisCycle = false;
-                String line;
-                while ((line = reader.readLine()) != null
-                        && !Thread.currentThread().isInterrupted()) {
-                    String trimmed = line.trim();
-                    if (trimmed.isEmpty())
-                        continue;
+                        final double FRAME_MS = 16.666;
+                        final long startTime = android.os.SystemClock.elapsedRealtime();
+                        long frameIdx = 0;
+                        boolean vibratedThisCycle = false;
+                        String line;
+                        while ((line = reader.readLine()) != null
+                                && !Thread.currentThread().isInterrupted()) {
+                            String trimmed = line.trim();
+                            if (trimmed.isEmpty())
+                                continue;
 
-                    String[] vals = trimmed.split("[,\\t ]+");
-                    if (vals.length < GLYPH_ORDER.length)
-                        continue;
+                            String[] vals = trimmed.split("[,\\t ]+");
+                            if (vals.length < GLYPH_ORDER.length)
+                                continue;
 
-                    try {
-                        int[] bright = new int[GLYPH_ORDER.length];
-                        boolean anyNonZero = false;
-                        for (int i = 0; i < GLYPH_ORDER.length; i++) {
-                            int val = Math.round(Integer.parseInt(vals[i]) * scale);
-                            bright[i] = Math.max(val, torchVal);
-                            if (bright[i] > 0)
-                                anyNonZero = true;
-                        }
+                            try {
+                                int[] bright = new int[GLYPH_ORDER.length];
+                                boolean anyNonZero = false;
+                                for (int i = 0; i < GLYPH_ORDER.length; i++) {
+                                    int val = Math.round(Integer.parseInt(vals[i]) * scale);
+                                    bright[i] = Math.max(val, torchVal);
+                                    if (bright[i] > 0)
+                                        anyNonZero = true;
+                                }
 
-                        if (anyNonZero && !vibratedThisCycle) {
-                            vibrate(vibrator, 25, 100, appCtx, -1);
-                            vibratedThisCycle = true;
-                        }
-                        if (!anyNonZero)
-                            vibratedThisCycle = false;
+                                if (anyNonZero && !vibratedThisCycle) {
+                                    vibrate(vibrator, 25, 100, appCtx, -1);
+                                    vibratedThisCycle = true;
+                                }
+                                if (!anyNonZero)
+                                    vibratedThisCycle = false;
 
-                        for (int i = 0; i < GLYPH_ORDER.length; i++) {
-                            GlyphManagerV2.getInstance().setBrightness(GLYPH_ORDER[i], bright[i]);
-                        }
-                    } catch (NumberFormatException ignored) {
-                    }
+                                for (int i = 0; i < GLYPH_ORDER.length; i++) {
+                                    GlyphManagerV2.getInstance().setBrightness(
+                                            GLYPH_ORDER[i], bright[i]);
+                                }
+                            } catch (NumberFormatException ignored) {
+                            }
 
-                    frameIdx++;
-                    long expectedTime = startTime + (long) (frameIdx * FRAME_MS);
-                    long sleepTime = expectedTime - android.os.SystemClock.elapsedRealtime();
-                    if (sleepTime > 0) {
-                        try {
-                            Thread.sleep(sleepTime);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    } else if (sleepTime < -33) {
-                        long skip = (long) (Math.abs(sleepTime) / FRAME_MS);
-                        for (long s = 0; s < skip && reader.readLine() != null; s++) {
                             frameIdx++;
+                            long expectedTime = startTime + (long) (frameIdx * FRAME_MS);
+                            long sleepTime =
+                                    expectedTime - android.os.SystemClock.elapsedRealtime();
+                            if (sleepTime > 0) {
+                                try {
+                                    Thread.sleep(sleepTime);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            } else if (sleepTime < -33) {
+                                long skip = (long) (Math.abs(sleepTime) / FRAME_MS);
+                                for (long s = 0; s < skip && reader.readLine() != null; s++) {
+                                    frameIdx++;
+                                }
+                            }
                         }
                     }
-                }
+                } while (loop && !Thread.currentThread().isInterrupted());
             } catch (Exception ignored) {
             } finally {
                 if (sessionCounter.get() == sessionId) {
