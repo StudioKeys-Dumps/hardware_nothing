@@ -53,7 +53,16 @@ public class AudioVisualizerService extends Service {
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         mPrefs = getSharedPreferences(getString(R.string.pref_file), MODE_PRIVATE);
-        visualizerMode = mPrefs.getInt("visualizer_mode", MODE_BEAT);
+        visualizerMode = mPrefs.getInt("visualizer_mode", MODE_15ZONE);
+        // Pass 9 introduced a phantom MODE_NATIVE=3 that wrote "1" into
+        // music_leds_effect — but the AW210XX driver's store() expects FIVE
+        // brightness ints (r_cam f_cam round vline dot), not an enable toggle,
+        // so the write was a no-op. Coerce any stale pref pointing at the
+        // removed mode back to a working one.
+        if (visualizerMode != MODE_BEAT && visualizerMode != MODE_5ZONE
+                && visualizerMode != MODE_15ZONE) {
+            visualizerMode = MODE_15ZONE;
+        }
 
         if (visualizerMode == MODE_BEAT) {
             mRunningSoundAvg = new double[5];
@@ -97,18 +106,8 @@ public class AudioVisualizerService extends Service {
         mVisualizer.setEnabled(true);
     }
 
-    private static volatile boolean sRingtonePreviewActive = false;
-
-    /**
-     * Signal that a ringtone preview is active so the visualizer responds
-     * to non-music audio (STREAM_RING / STREAM_NOTIFICATION).
-     */
-    public static void setRingtonePreviewActive(boolean active) {
-        sRingtonePreviewActive = active;
-    }
-
     private boolean isAudioActive() {
-        return mAudioManager.isMusicActive() || sRingtonePreviewActive;
+        return mAudioManager.isMusicActive();
     }
 
     private boolean isScreenOffBlocked() {
@@ -168,24 +167,14 @@ public class AudioVisualizerService extends Service {
         AnimationManager.showVisualizer(zoneIntensities, this);
     }
 
-    // Use STREAM_RING during ringtone previews so the ring slider drives glyph level.
     private float currentVolumeScale() {
-        int stream = sRingtonePreviewActive ? AudioManager.STREAM_RING
-                                            : AudioManager.STREAM_MUSIC;
-        int currentVol = mAudioManager.getStreamVolume(stream);
-        int maxVol = mAudioManager.getStreamMaxVolume(stream);
+        int currentVol = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maxVol = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         return maxVol > 0 ? (float) currentVol / maxVol : 0f;
     }
 
     private int effectiveBrightness() {
-        if (!sRingtonePreviewActive) {
-            return GlyphManagerV2.MAX_BRIGHTNESS;
-        }
-        int pref = mPrefs != null ? mPrefs.getInt("brightness", GlyphManagerV2.MAX_BRIGHTNESS)
-                                  : GlyphManagerV2.MAX_BRIGHTNESS;
-        if (pref < 0) pref = 0;
-        if (pref > GlyphManagerV2.MAX_BRIGHTNESS) pref = GlyphManagerV2.MAX_BRIGHTNESS;
-        return pref;
+        return GlyphManagerV2.MAX_BRIGHTNESS;
     }
 
     private void processBeatFFT(byte[] fft) {
@@ -245,7 +234,7 @@ public class AudioVisualizerService extends Service {
         }
         mNumberOfSamplesInOneSec++;
 
-        AnimationManager.showVisualizer(zoneIntensities, this);
+        AnimationManager.showVisualizer(zoneIntensities, this, true);
     }
 
     @Override

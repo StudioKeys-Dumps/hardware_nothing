@@ -705,9 +705,13 @@ public class MainActivity extends AppCompatActivity {
 
         if (cardMusicVisualizer != null) {
             cardMusicVisualizer.setOnClickListener(v -> {
-                String[] modes = {
-                        "Beat detection", "5-zone LED Visualizer", "15-zone LED Visualizer"};
-                int current = prefs.getInt("visualizer_mode", 0);
+                String[] modes = {"Beat detection", "5-zone LED Visualizer",
+                        "15-zone LED Visualizer"};
+                int current = prefs.getInt("visualizer_mode",
+                        org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE);
+                if (current < 0 || current >= modes.length) {
+                    current = org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE;
+                }
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Visualizer Mode")
                         .setSingleChoiceItems(modes, current,
@@ -871,16 +875,17 @@ public class MainActivity extends AppCompatActivity {
     private void updateMusicZoneLabel() {
         if (textCurrentMusic == null)
             return;
-        int mode = prefs.getInt("visualizer_mode", 0);
+        int mode = prefs.getInt("visualizer_mode",
+                org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE);
         switch (mode) {
-            case 1:
+            case org.aspends.nglyphs.services.AudioVisualizerService.MODE_BEAT:
+                textCurrentMusic.setText("Beat detection \u00b7 Pulse on beats");
+                break;
+            case org.aspends.nglyphs.services.AudioVisualizerService.MODE_5ZONE:
                 textCurrentMusic.setText("5-zone \u00b7 Sync to audio");
                 break;
-            case 2:
-                textCurrentMusic.setText("15-zone \u00b7 Full LED array");
-                break;
             default:
-                textCurrentMusic.setText("Beat detection \u00b7 Pulse on beats");
+                textCurrentMusic.setText("15-zone \u00b7 Full LED array");
                 break;
         }
     }
@@ -970,25 +975,7 @@ public class MainActivity extends AppCompatActivity {
      * Checks and silently grants required permissions for the system app.
      */
     private void checkAllPermissions() {
-        if (!isNotificationServiceEnabled()) {
-            try {
-                String packageName = getPackageName();
-                String listeners = Settings.Secure.getString(
-                        getContentResolver(), "enabled_notification_listeners");
-                String componentName =
-                        packageName + "/org.aspends.nglyphs.services.GlyphNotificationListener";
-                if (listeners == null || listeners.isEmpty()) {
-                    listeners = componentName;
-                } else if (!listeners.contains(componentName)) {
-                    listeners += ":" + componentName;
-                }
-                Settings.Secure.putString(
-                        getContentResolver(), "enabled_notification_listeners", listeners);
-                Log.i("MainActivity", "Silently granted notification listener access");
-            } catch (Exception e) {
-                Log.e("MainActivity", "Failed to grant notification access", e);
-            }
-        }
+        org.aspends.nglyphs.receivers.BootCompletedReceiver.grantNotificationListener(this);
 
         List<String> permissionsToRequest = new ArrayList<>();
 
@@ -1013,17 +1000,6 @@ public class MainActivity extends AppCompatActivity {
         if (!permissionsToRequest.isEmpty()) {
             requestPermissions(permissionsToRequest.toArray(new String[0]), 101);
         }
-    }
-
-    /**
-     * Checks if the app currently has permission to read notifications.
-     *
-     * @return True if the notification listener service is enabled for this app.
-     */
-    private boolean isNotificationServiceEnabled() {
-        String flat =
-                Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        return flat != null && flat.contains(getPackageName());
     }
 
     /**

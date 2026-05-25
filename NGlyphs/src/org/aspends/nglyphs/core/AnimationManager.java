@@ -277,6 +277,11 @@ public class AnimationManager {
     }
 
     public static void showVisualizer(int[] zoneIntensities, android.content.Context context) {
+        showVisualizer(zoneIntensities, context, false);
+    }
+
+    public static void showVisualizer(
+            int[] zoneIntensities, android.content.Context context, boolean beatLayout) {
         if (context != null) {
             android.content.SharedPreferences prefs = context.getSharedPreferences(
                     context.getString(R.string.pref_file), android.content.Context.MODE_PRIVATE);
@@ -298,6 +303,20 @@ public class AnimationManager {
             for (int i = 0; i < 15; i++) {
                 frame[i] = zoneIntensities[i] < threshold ? 0 : zoneIntensities[i];
             }
+        } else if (beatLayout && zoneIntensities.length >= 5) {
+            // Beat Detection only — stock "Music Visualisation" layout: the 8-LED
+            // center line pulses with the bass/kick; mids light the charging circle
+            // and rear-cam arc; treble flicks the dot. Frame indices map to physical
+            // LEDs via frame_leds_effect (kernel leds_aw210xx.c).
+            int lineVal = zoneIntensities[0]; // bass -> center line (8 LEDs)
+            for (int i = 7; i <= 14; i++) frame[i] = lineVal;
+
+            int roundVal = zoneIntensities[1]; // low-mid -> charging circle
+            frame[2] = frame[3] = frame[4] = frame[5] = roundVal;
+
+            frame[0] = zoneIntensities[2]; // mid -> rear-cam arc
+            frame[1] = zoneIntensities[3]; // mid-high -> diagonal strip
+            frame[6] = zoneIntensities[4]; // treble -> dot
         } else if (zoneIntensities.length >= 5) {
             int bass = zoneIntensities[0];
             frame[2] = frame[3] = frame[4] = frame[5] = bass;

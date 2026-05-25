@@ -176,10 +176,6 @@ public class GlyphManagerV2 {
         withWakeLock(1000, () -> ShellUtils.fastWrite(path, value));
     }
 
-    private void executeRawCommand(final String command) {
-        withWakeLock(3000, () -> ShellUtils.executeCommand(command));
-    }
-
     public void setNativeEffect(NativeEffect effect, int value) {
         writeSysfs(effect.path, String.valueOf(value));
     }
