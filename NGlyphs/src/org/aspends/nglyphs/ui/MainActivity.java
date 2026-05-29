@@ -708,9 +708,9 @@ public class MainActivity extends AppCompatActivity {
                 String[] modes = {"Beat detection", "5-zone LED Visualizer",
                         "15-zone LED Visualizer"};
                 int current = prefs.getInt("visualizer_mode",
-                        org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE);
+                        org.aspends.nglyphs.services.AudioVisualizerService.MODE_BEAT);
                 if (current < 0 || current >= modes.length) {
-                    current = org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE;
+                    current = org.aspends.nglyphs.services.AudioVisualizerService.MODE_BEAT;
                 }
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Visualizer Mode")
@@ -876,7 +876,7 @@ public class MainActivity extends AppCompatActivity {
         if (textCurrentMusic == null)
             return;
         int mode = prefs.getInt("visualizer_mode",
-                org.aspends.nglyphs.services.AudioVisualizerService.MODE_15ZONE);
+                org.aspends.nglyphs.services.AudioVisualizerService.MODE_BEAT);
         switch (mode) {
             case org.aspends.nglyphs.services.AudioVisualizerService.MODE_BEAT:
                 textCurrentMusic.setText("Beat detection \u00b7 Pulse on beats");

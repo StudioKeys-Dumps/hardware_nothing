@@ -337,6 +337,17 @@ public class AnimationManager {
         }
     }
 
+    // Clears the glyphs and releases the lock when music stops.
+    public static void stopVisualizer(android.content.Context context) {
+        if (activePriority != PRIORITY_VISUALIZER && runningLoopPriority != PRIORITY_VISUALIZER) {
+            return;
+        }
+        isAnimationRunning = false;
+        runningLoopPriority = PRIORITY_NONE;
+        GlyphManagerV2.getInstance().setFrame(new int[15]);
+        releaseLock(PRIORITY_VISUALIZER);
+    }
+
     public static void showProgressLevel(int percentage, android.content.Context context) {
         if (context != null) {
             android.content.SharedPreferences prefs = context.getSharedPreferences(

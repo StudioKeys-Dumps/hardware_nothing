@@ -34,8 +34,13 @@ public class AudioVisualizerService extends Service {
     private double[] mCurrentAvgEnergyOneSec;
     private int mNumberOfSamplesInOneSec;
     private long mSystemTimeStartSec;
-    private float[] beatDecay;
-    private static final float BEAT_DECAY_RATE = 0.85f;
+
+    // Self-clear watchdog: clears the glyphs if no fresh audio frame arrives in time.
+    private final android.os.Handler clearHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable clearRunnable = () -> AnimationManager.stopVisualizer(this);
+    private volatile boolean wasVisualizing = false;
+    private static final long IDLE_CLEAR_MS = 250;
 
     private static final int LOW_FREQUENCY = 200;
     private static final int MID_LOW_FREQUENCY = 500;
@@ -53,7 +58,7 @@ public class AudioVisualizerService extends Service {
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         mPrefs = getSharedPreferences(getString(R.string.pref_file), MODE_PRIVATE);
-        visualizerMode = mPrefs.getInt("visualizer_mode", MODE_15ZONE);
+        visualizerMode = mPrefs.getInt("visualizer_mode", MODE_BEAT);
         // Pass 9 introduced a phantom MODE_NATIVE=3 that wrote "1" into
         // music_leds_effect — but the AW210XX driver's store() expects FIVE
         // brightness ints (r_cam f_cam round vline dot), not an enable toggle,
@@ -67,10 +72,8 @@ public class AudioVisualizerService extends Service {
         if (visualizerMode == MODE_BEAT) {
             mRunningSoundAvg = new double[5];
             mCurrentAvgEnergyOneSec = new double[5];
-            beatDecay = new float[5];
             for (int i = 0; i < 5; i++) mCurrentAvgEnergyOneSec[i] = -1;
             mSystemTimeStartSec = System.currentTimeMillis();
-            smoothed = new float[5];
         } else {
             int zones = visualizerMode == MODE_15ZONE ? 15 : 5;
             smoothed = new float[zones];
@@ -92,13 +95,23 @@ public class AudioVisualizerService extends Service {
 
             @Override
             public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
-                if (isRunning && isAudioActive() && !SleepGuard.isBlocked(mPrefs)
-                        && !isScreenOffBlocked()) {
+                boolean canRun = isRunning && isAudioActive() && !SleepGuard.isBlocked(mPrefs)
+                        && !isScreenOffBlocked();
+                if (canRun) {
                     if (visualizerMode == MODE_BEAT) {
                         processBeatFFT(fft);
                     } else {
                         processFFT(fft, samplingRate);
                     }
+                    wasVisualizing = true;
+                    // Re-arm the silence watchdog on every fresh frame.
+                    clearHandler.removeCallbacks(clearRunnable);
+                    clearHandler.postDelayed(clearRunnable, IDLE_CLEAR_MS);
+                } else if (wasVisualizing) {
+                    // Audio went inactive while lit: clear now and release the lock.
+                    wasVisualizing = false;
+                    clearHandler.removeCallbacks(clearRunnable);
+                    AnimationManager.stopVisualizer(AudioVisualizerService.this);
                 }
             }
         }, Visualizer.getMaxCaptureRate() / 2, false, true);
@@ -181,8 +194,6 @@ public class AudioVisualizerService extends Service {
         double captureSize = mVisualizer.getCaptureSize() / 2.0;
         int sampleRate = mVisualizer.getSamplingRate() / 2000;
 
-        float volScale = currentVolumeScale();
-
         int[] bandLimits = {LOW_FREQUENCY, MID_LOW_FREQUENCY, MID_FREQUENCY, MID_HIGH_FREQUENCY,
                 HIGH_FREQUENCY};
         boolean[] beatDetected = new boolean[5];
@@ -212,14 +223,10 @@ public class AudioVisualizerService extends Service {
             }
         }
 
+        // Hard on/off blink like ParanoidGlyph: full brightness on a beat, dark otherwise.
         int[] zoneIntensities = new int[5];
         for (int i = 0; i < 5; i++) {
-            if (beatDetected[i]) {
-                beatDecay[i] = 1.0f;
-            } else {
-                beatDecay[i] *= BEAT_DECAY_RATE;
-            }
-            zoneIntensities[i] = (int) (beatDecay[i] * volScale * effectiveBrightness());
+            zoneIntensities[i] = beatDetected[i] ? effectiveBrightness() : 0;
         }
 
         long currentTime = System.currentTimeMillis();
@@ -245,6 +252,7 @@ public class AudioVisualizerService extends Service {
     @Override
     public void onDestroy() {
         isRunning = false;
+        clearHandler.removeCallbacks(clearRunnable);
         if (mVisualizer != null) {
             mVisualizer.setEnabled(false);
             mVisualizer.release();
