@@ -67,8 +67,6 @@ public final class Constants {
     public static final String GLYPH_SCHEDULE_START_MINUTE = "glyph_settings_schedule_start_minute";
     public static final String GLYPH_SCHEDULE_END_HOUR     = "glyph_settings_schedule_end_hour";
     public static final String GLYPH_SCHEDULE_END_MINUTE   = "glyph_settings_schedule_end_minute";
-    public static final String GLYPH_THERMAL_CPU_ENABLE    = "glyph_settings_thermal_cpu_enable";
-    public static final String GLYPH_THERMAL_CPU_THRESHOLD = "glyph_settings_thermal_cpu_threshold";
     public static final String GLYPH_CAMERA_RECORDING_LED_ENABLE = "glyph_settings_camera_recording_led_toggle";
 
     public static final String[] APPS_TO_IGNORE = {

@@ -65,8 +65,6 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
     private ListPreference mScheduleModePreference;
     private Preference mScheduleStartPreference;
     private Preference mScheduleEndPreference;
-    private SwitchPreferenceCompat mThermalCpuPreference;
-    private SliderPreference mThermalCpuThresholdPreference;
     private SwitchPreferenceCompat mCameraRecordingLedPreference;
 
     private BroadcastReceiver mScheduleStateReceiver;
@@ -171,25 +169,6 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
 
         updateScheduleSummaries();
 
-        mThermalCpuPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_THERMAL_CPU_ENABLE);
-        mThermalCpuPreference.setOnPreferenceChangeListener(this);
-
-        mThermalCpuThresholdPreference = (SliderPreference) findPreference(Constants.GLYPH_THERMAL_CPU_THRESHOLD);
-        mThermalCpuThresholdPreference.setMin(65);
-        mThermalCpuThresholdPreference.setMax(95);
-        mThermalCpuThresholdPreference.setSliderIncrement(5);
-        mThermalCpuThresholdPreference.setHapticFeedbackMode(SliderPreference.HAPTIC_FEEDBACK_MODE_ON_TICKS);
-        mThermalCpuThresholdPreference.setTickVisible(false);
-        mThermalCpuThresholdPreference.setUpdatesContinuously(true);
-        
-        int currentThreshold = SettingsManager.getGlyphThermalCpuThreshold();
-        currentThreshold = Math.round(currentThreshold / 5.0f) * 5;
-        if (currentThreshold < 65) currentThreshold = 65;
-        if (currentThreshold > 95) currentThreshold = 95;
-        mThermalCpuThresholdPreference.setValue(currentThreshold);
-        mThermalCpuThresholdPreference.setSummary(currentThreshold + "°C");
-        mThermalCpuThresholdPreference.setOnPreferenceChangeListener(this);
-
         mCameraRecordingLedPreference = (SwitchPreferenceCompat) findPreference(Constants.GLYPH_CAMERA_RECORDING_LED_ENABLE);
         if (mCameraRecordingLedPreference != null) {
             mCameraRecordingLedPreference.setChecked(SettingsManager.isGlyphCameraRecordingLedEnabled());
@@ -245,9 +224,6 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
         mScheduleModePreference.setEnabled(glyphEnabled && !musicEnabled);
         mScheduleStartPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
         mScheduleEndPreference.setVisible(glyphEnabled && !musicEnabled && scheduleCustom);
-
-        mThermalCpuPreference.setEnabled(canEnableSubFeatures);
-        mThermalCpuThresholdPreference.setEnabled(canEnableSubFeatures && mThermalCpuPreference.isChecked());
 
         if (mCameraRecordingLedPreference != null) mCameraRecordingLedPreference.setEnabled(canEnableSubFeatures);
     }
@@ -307,21 +283,6 @@ public class SettingsFragment extends SettingsBasePreferenceFragment implements 
             int mode = Integer.parseInt((String) newValue);
             SettingsManager.setGlyphScheduleMode(mode);
             updateDependencies(isGlyphEnabled, isMusicEnabled);
-            mHandler.post(() -> ServiceUtils.checkGlyphService());
-            return true;
-        }
-
-        if (preferenceKey.equals(Constants.GLYPH_THERMAL_CPU_ENABLE)) {
-            boolean enabled = (Boolean) newValue;
-            mThermalCpuThresholdPreference.setEnabled(enabled);
-            mHandler.post(() -> ServiceUtils.checkGlyphService());
-            return true;
-        }
-
-        if (preferenceKey.equals(Constants.GLYPH_THERMAL_CPU_THRESHOLD)) {
-            int value = (Integer) newValue;
-            value = Math.round(value / 5.0f) * 5;
-            mThermalCpuThresholdPreference.setSummary(value + "°C");
             mHandler.post(() -> ServiceUtils.checkGlyphService());
             return true;
         }

@@ -92,12 +92,6 @@
     <string name="glyph_settings_schedule_mode_title">Turn off Glyph automatically</string>
     <string name="glyph_settings_schedule_start_title">Start time</string>
     <string name="glyph_settings_schedule_end_title">End time</string>
-    
-    <!-- Thermal -->
-    <string name="glyph_settings_thermal_title">Temperature</string>
-    <string name="glyph_settings_thermal_cpu_enable_title">CPU temperature alert</string>
-    <string name="glyph_settings_thermal_cpu_enable_summary">Enable Dot Glyph when CPU temperature reaches the defined limit</string>
-    <string name="glyph_settings_thermal_cpu_threshold_title">Temperature limit</string>
 
     <!-- Recording LED -->
     <string name="glyph_settings_camera_title">Camera</string>
