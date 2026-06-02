@@ -39,9 +39,19 @@ BiometricsFingerprint::BiometricsFingerprint()
       mUdfpsHandlerFactory(nullptr),
       mUdfpsHandler(nullptr) {
     sInstance = this;  // keep track of the most recent instance
-    mDevice = openHal();
+
+    // Retry openHal up to 10 times with 200ms interval to avoid race condition
+    // where the service starts before /dev/goodix_fp is created by the kernel.
+    for (int retry = 0; retry < 10 && !mDevice; retry++) {
+        if (retry > 0) {
+            ALOGW("openHal failed, retry %d/10...", retry);
+            usleep(200000); // 200ms
+        }
+        mDevice = openHal();
+    }
+
     if (!mDevice) {
-        ALOGE("Can't open HAL module");
+        ALOGE("Can't open HAL module after retries — fingerprint will be unavailable");
     }
 
     mUdfpsHandlerFactory = getUdfpsHandlerFactory();
@@ -177,24 +187,44 @@ Return<uint64_t> BiometricsFingerprint::setNotify(
 }
 
 Return<uint64_t> BiometricsFingerprint::preEnroll() {
+    if (!mDevice) {
+        ALOGE("preEnroll: mDevice is null, HAL not ready");
+        return 0;
+    }
     return mDevice->pre_enroll(mDevice);
 }
 
 Return<RequestStatus> BiometricsFingerprint::enroll(const hidl_array<uint8_t, 69>& hat,
                                                     uint32_t gid, uint32_t timeoutSec) {
+    if (!mDevice) {
+        ALOGE("enroll: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     const hw_auth_token_t* authToken = reinterpret_cast<const hw_auth_token_t*>(hat.data());
     return ErrorFilter(mDevice->enroll(mDevice, authToken, gid, timeoutSec));
 }
 
 Return<RequestStatus> BiometricsFingerprint::postEnroll() {
+    if (!mDevice) {
+        ALOGE("postEnroll: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     return ErrorFilter(mDevice->post_enroll(mDevice));
 }
 
 Return<uint64_t> BiometricsFingerprint::getAuthenticatorId() {
+    if (!mDevice) {
+        ALOGE("getAuthenticatorId: mDevice is null, HAL not ready");
+        return 0;
+    }
     return mDevice->get_authenticator_id(mDevice);
 }
 
 Return<RequestStatus> BiometricsFingerprint::cancel() {
+    if (!mDevice) {
+        ALOGE("cancel: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     if (mUdfpsHandler) {
         mUdfpsHandler->cancel();
     }
@@ -202,15 +232,27 @@ Return<RequestStatus> BiometricsFingerprint::cancel() {
 }
 
 Return<RequestStatus> BiometricsFingerprint::enumerate() {
+    if (!mDevice) {
+        ALOGE("enumerate: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     return ErrorFilter(mDevice->enumerate(mDevice));
 }
 
 Return<RequestStatus> BiometricsFingerprint::remove(uint32_t gid, uint32_t fid) {
+    if (!mDevice) {
+        ALOGE("remove: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     return ErrorFilter(mDevice->remove(mDevice, gid, fid));
 }
 
 Return<RequestStatus> BiometricsFingerprint::setActiveGroup(uint32_t gid,
                                                             const hidl_string& storePath) {
+    if (!mDevice) {
+        ALOGE("setActiveGroup: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     if (storePath.size() >= PATH_MAX || storePath.size() <= 0) {
         ALOGE("Bad path length: %zd", storePath.size());
         return RequestStatus::SYS_EINVAL;
@@ -229,6 +271,10 @@ Return<RequestStatus> BiometricsFingerprint::setActiveGroup(uint32_t gid,
 }
 
 Return<RequestStatus> BiometricsFingerprint::authenticate(uint64_t operationId, uint32_t gid) {
+    if (!mDevice) {
+        ALOGE("authenticate: mDevice is null, HAL not ready");
+        return RequestStatus::SYS_ENOENT;
+    }
     return ErrorFilter(mDevice->authenticate(mDevice, operationId, gid));
 }
 
