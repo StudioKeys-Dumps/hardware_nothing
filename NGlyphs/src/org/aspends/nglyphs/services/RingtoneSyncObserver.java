@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.aspends.nglyphs.R;
+import org.aspends.nglyphs.util.AssetStyleUtils;
 import org.aspends.nglyphs.util.OggGlyphEncoder;
 import org.aspends.nglyphs.util.OggMetadataParser;
 
@@ -392,8 +393,7 @@ public final class RingtoneSyncObserver {
             String idxKey,
             int toneType) {
         // loadStyleNames() stores values without extension, so save just the base name
-        String csvFileName = csvName + ".csv";
-        int idx = findAssetIndex(context, assetFolder, csvFileName);
+        int idx = AssetStyleUtils.findStyleIndex(context, assetFolder, csvName);
 
         SharedPreferences prefs =
                 context.getSharedPreferences(context.getString(R.string.pref_file),
@@ -598,38 +598,6 @@ public final class RingtoneSyncObserver {
     private static String stripExtension(String name) {
         int dotIdx = name.lastIndexOf('.');
         return (dotIdx > 0) ? name.substring(0, dotIdx) : name;
-    }
-
-    /**
-     * Finds the index of {@code csvFileName} (e.g. "Abra.csv") in the sorted list of
-     * {@code *.csv} files under the given assets sub-folder.
-     *
-     * @return zero-based index, or -1 if not found
-     */
-    private static int findAssetIndex(Context context, String assetFolder, String csvFileName) {
-        try {
-            String[] files = context.getAssets().list(assetFolder);
-            if (files == null) {
-                return -1;
-            }
-            // Collect only CSV entries, sort them to match the order used by StyleSelectionActivity
-            java.util.List<String> csvFiles = new java.util.ArrayList<>();
-            for (String f : files) {
-                if (f.endsWith(".csv")) {
-                    csvFiles.add(f);
-                }
-            }
-            Collections.sort(csvFiles);
-
-            for (int i = 0; i < csvFiles.size(); i++) {
-                if (csvFiles.get(i).equalsIgnoreCase(csvFileName)) {
-                    return i;
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to list assets/" + assetFolder, e);
-        }
-        return -1;
     }
 
     private static void copyUriToFile(Context context, Uri uri, File dest) throws Exception {

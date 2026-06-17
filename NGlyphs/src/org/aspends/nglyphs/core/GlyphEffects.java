@@ -1230,6 +1230,47 @@ public class GlyphEffects {
         }
     }
 
+    private static boolean assetExists(android.content.Context context, String assetPath) {
+        if (context == null || assetPath == null) {
+            return false;
+        }
+        try (java.io.InputStream is = context.getAssets().open(assetPath)) {
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * Copies a built-in asset OGG to cache so {@link OggMetadataParser} can read
+     * the embedded glyph timeline the same way imported custom ringtones do.
+     */
+    private static java.io.File stageAssetOgg(
+            android.content.Context context, String folder, String baseName) {
+        String assetPath = folder + "/" + baseName + ".ogg";
+        if (!assetExists(context, assetPath)) {
+            return null;
+        }
+
+        java.io.File cacheDir = new java.io.File(context.getCacheDir(), "asset_ogg");
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            return null;
+        }
+
+        java.io.File out = new java.io.File(cacheDir, folder + "_" + baseName + ".ogg");
+        try (java.io.InputStream is = context.getAssets().open(assetPath);
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
+            byte[] buf = new byte[4096];
+            int len;
+            while ((len = is.read(buf)) > 0) {
+                fos.write(buf, 0, len);
+            }
+            return out;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     public static void play(android.content.Context context, String folder, String fileName,
             Vibrator vibrator, int brightness) {
         play(context, folder, fileName, vibrator, brightness, false);
@@ -1263,9 +1304,20 @@ public class GlyphEffects {
         activeEffectFuture = effectExecutor.submit(() -> {
             AnimationManager.setHighPriorityActive(true);
             try {
+                String csvPath = folder + "/" + fileName + ".csv";
+                if (!assetExists(appCtx, csvPath)) {
+                    java.io.File ogg = stageAssetOgg(appCtx, folder, fileName);
+                    if (ogg != null) {
+                        int streamType = loop ? android.media.AudioManager.STREAM_RING
+                                              : android.media.AudioManager.STREAM_NOTIFICATION;
+                        executeCustomRingtone(ogg, brightness, vibrator, appCtx, streamType,
+                                sessionId, false);
+                        return;
+                    }
+                }
+
                 do {
-                    try (java.io.InputStream is =
-                                    appCtx.getAssets().open(folder + "/" + fileName + ".csv");
+                    try (java.io.InputStream is = appCtx.getAssets().open(csvPath);
                             java.io.BufferedReader reader = new java.io.BufferedReader(
                                     new java.io.InputStreamReader(is))) {
                         android.content.SharedPreferences prefs = appCtx.getSharedPreferences(

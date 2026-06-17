@@ -321,21 +321,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String[] loadStyleNames(String folder) {
-        try {
-            String[] files = getAssets().list(folder);
-            if (files == null || files.length == 0)
-                return new String[] {};
-            List<String> names = new ArrayList<>();
-            for (String f : files) {
-                if (f.endsWith(".csv")) {
-                    names.add(f.replace(".csv", ""));
-                }
-            }
-            java.util.Collections.sort(names);
-            return names.toArray(new String[0]);
-        } catch (Exception e) {
-            return new String[] {};
-        }
+        return org.aspends.nglyphs.util.AssetStyleUtils.listStyleNames(this, folder);
     }
 
     /**
