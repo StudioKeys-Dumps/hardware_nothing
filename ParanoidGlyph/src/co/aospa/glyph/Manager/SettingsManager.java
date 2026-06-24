@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import co.aospa.glyph.Constants.Constants;
-import co.aospa.glyph.Utils.FileUtils;
 import co.aospa.glyph.Utils.ResourceUtils;
 
 public final class SettingsManager {
@@ -60,7 +59,7 @@ public final class SettingsManager {
     }
 
     public static int getGlyphBrightnessSetting() {
-        int d = 3; if (FileUtils.readLine("/mnt/vendor/persist/color") == "white") d = 2;
+        int d = 3;
         return PreferenceManager.getDefaultSharedPreferences(context)
                 .getInt(Constants.GLYPH_BRIGHTNESS, d);
     }
